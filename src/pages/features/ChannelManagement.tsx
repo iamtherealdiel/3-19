@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
-import { 
-  ArrowLeft, 
-  Play, 
-  RefreshCw, 
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../lib/supabase";
+import {
+  ArrowLeft,
+  Play,
+  RefreshCw,
   Settings,
   TrendingUp,
   Eye,
@@ -13,8 +13,8 @@ import {
   Youtube,
   ExternalLink,
   BarChart2,
-  User
-} from 'lucide-react';
+  User,
+} from "lucide-react";
 
 interface Channel {
   url: string;
@@ -27,7 +27,7 @@ interface Channel {
 export default function ChannelManagement() {
   const { user } = useAuth();
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [channels, setChannels] = useState<Channel[]>([]);
+  const [channels, setChannels] = useState<Channel[]>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,51 +38,54 @@ export default function ChannelManagement() {
       try {
         // Get user's linked channels
         const { data: requestData, error: requestError } = await supabase
-          .from('user_requests')
-          .select('youtube_links')
-          .eq('user_id', user.id)
+          .from("user_requests")
+          .select("youtube_links")
+          .eq("user_id", user.id)
           .single();
 
         if (requestError) throw requestError;
 
         if (!requestData?.youtube_links?.length) {
-          setError('No channels linked to your account');
+          setError("No channels linked to your account");
           setIsLoading(false);
           return;
         }
 
         // Get views data for each channel
         const { data: viewsData, error: viewsError } = await supabase
-          .from('channel_views')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('month', { ascending: false });
+          .from("channel_views")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("month", { ascending: false });
 
         if (viewsError) throw viewsError;
 
         // Transform data
-        const channelList = (requestData?.youtube_links || []).map((url: string) => {
-          const channelViews = viewsData?.filter(v => v.channel_id === url) || [];
-          const currentMonthViews = channelViews[0]?.views || 0;
-          const lastMonthViews = channelViews[1]?.views || 0;
-          const growth = lastMonthViews ? ((currentMonthViews - lastMonthViews) / lastMonthViews) * 100 : 0;
+        const channelList = (requestData?.youtube_links || []).map(
+          (url: string) => {
+            const channelViews =
+              viewsData?.filter((v) => v.channel_id === url) || [];
+            const currentMonthViews = channelViews[0]?.views || 0;
+            const lastMonthViews = channelViews[1]?.views || 0;
+            const growth = lastMonthViews
+              ? ((currentMonthViews - lastMonthViews) / lastMonthViews) * 100
+              : 0;
 
-          return {
-            url,
-            views: channelViews.reduce((sum, v) => sum + v.views, 0),
-            monthlyViews: currentMonthViews,
-            subscribers: Math.floor(Math.random() * 1000000), // Mock data
-            growth
-          };
-        });
-
-        setChannels(channelList);
+            return {
+              url,
+              views: channelViews.reduce((sum, v) => sum + v.views, 0),
+              monthlyViews: currentMonthViews,
+              subscribers: Math.floor(Math.random() * 1000000), // Mock data
+              growth,
+            };
+          }
+        );
         if (channelList.length > 0 && !selectedChannel) {
           setSelectedChannel(channelList[0]);
         }
       } catch (error) {
-        console.error('Error fetching channels:', error);
-        setError('Failed to load channel data');
+        console.error("Error fetching channels:", error);
+        setError("Failed to load channel data");
       } finally {
         setIsLoading(false);
       }
@@ -111,7 +114,8 @@ export default function ChannelManagement() {
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">{error}</h3>
           <p className="text-slate-400 mb-6">
-            Please link your YouTube channels through the onboarding process to view analytics.
+            Please link your YouTube channels through the onboarding process to
+            view analytics.
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -133,8 +137,10 @@ export default function ChannelManagement() {
           <div className="w-80 flex-shrink-0">
             <div className="bg-slate-800 rounded-xl p-6 sticky top-8">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-white">Your Channels</h2>
-                <button 
+                <h2 className="text-xl font-semibold text-white">
+                  Your Channels
+                </h2>
+                <button
                   className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
                   onClick={() => {
                     setIsLoading(true);
@@ -152,20 +158,24 @@ export default function ChannelManagement() {
                     onClick={() => setSelectedChannel(channel)}
                     className={`w-full p-4 rounded-xl transition-all duration-300 ${
                       selectedChannel?.url === channel.url
-                        ? 'bg-indigo-600 shadow-lg shadow-indigo-500/20'
-                        : 'bg-slate-700/50 hover:bg-slate-700'
+                        ? "bg-indigo-600 shadow-lg shadow-indigo-500/20"
+                        : "bg-slate-700/50 hover:bg-slate-700"
                     }`}
                   >
                     <div className="flex items-center">
                       <div className="h-10 w-10 rounded-full bg-slate-600 flex items-center justify-center">
                         <Youtube className="h-5 w-5 text-white" />
-                      </div> 
+                      </div>
                       <div className="ml-3 text-left">
                         <p className="text-white font-medium truncate max-w-[180px]">
-                          {channel.url.replace(/^https?:\/\/(www\.)?(youtube\.com\/|youtu\.be\/)/, '')}
+                          {channel.url.replace(
+                            /^https?:\/\/(www\.)?(youtube\.com\/|youtu\.be\/)/,
+                            ""
+                          )}
                         </p>
                         <p className="text-sm text-slate-400">
-                          {channel.monthlyViews.toLocaleString()} views this month
+                          {channel.monthlyViews.toLocaleString()} views this
+                          month
                         </p>
                       </div>
                     </div>
@@ -184,13 +194,16 @@ export default function ChannelManagement() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="h-12 w-12 rounded-full bg-indigo-600/20 flex items-center justify-center">
-                        <Youtube className="h-6 w-6 text-indigo-400" /> 
+                        <Youtube className="h-6 w-6 text-indigo-400" />
                       </div>
                       <div className="ml-4">
                         <h2 className="text-xl font-semibold text-white">
-                          {selectedChannel.url.replace(/^https?:\/\/(www\.)?(youtube\.com\/|youtu\.be\/)/, '')}
+                          {selectedChannel.url.replace(
+                            /^https?:\/\/(www\.)?(youtube\.com\/|youtu\.be\/)/,
+                            ""
+                          )}
                         </h2>
-                        <a 
+                        <a
                           href={selectedChannel.url}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -201,9 +214,9 @@ export default function ChannelManagement() {
                         </a>
                       </div>
                     </div>
-                      <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors">
-                        <Settings className="h-5 w-5" />
-                      </button>
+                    <button className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors">
+                      <Settings className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
 
@@ -268,28 +281,42 @@ export default function ChannelManagement() {
 
                 {/* Analytics Chart */}
                 <div className="bg-slate-800 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Views Over Time</h3>
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Views Over Time
+                  </h3>
                   <div className="h-64 flex items-center justify-center text-slate-400 bg-slate-700/50 rounded-lg">
                     <p className="text-center">
-                      <span className="block text-lg mb-2">📊 Analytics Coming Soon</span>
-                      <span className="text-sm text-slate-500">Detailed channel analytics will be available here</span>
+                      <span className="block text-lg mb-2">
+                        📊 Analytics Coming Soon
+                      </span>
+                      <span className="text-sm text-slate-500">
+                        Detailed channel analytics will be available here
+                      </span>
                     </p>
                   </div>
                 </div>
 
                 {/* Recent Videos */}
                 <div className="bg-slate-800 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Recent Videos</h3>
+                  <h3 className="text-lg font-semibold text-white mb-4">
+                    Recent Videos
+                  </h3>
                   <div className="space-y-4">
                     {[1, 2, 3].map((_, i) => (
-                      <div key={i} className="flex items-center p-4 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer">
+                      <div
+                        key={i}
+                        className="flex items-center p-4 bg-slate-700/50 rounded-lg hover:bg-slate-700 transition-colors cursor-pointer"
+                      >
                         <div className="w-32 h-20 bg-slate-600 rounded-lg flex items-center justify-center">
                           <Play className="h-8 w-8 text-slate-400" />
                         </div>
                         <div className="ml-4 flex-1">
-                          <h4 className="text-white font-medium">Video Title {i + 1}</h4>
+                          <h4 className="text-white font-medium">
+                            Video Title {i + 1}
+                          </h4>
                           <p className="text-sm text-slate-400 mt-1">
-                            {Math.floor(Math.random() * 10000).toLocaleString()} views • {Math.floor(Math.random() * 24)} hours ago
+                            {Math.floor(Math.random() * 10000).toLocaleString()}{" "}
+                            views • {Math.floor(Math.random() * 24)} hours ago
                           </p>
                         </div>
                         <ChevronRight className="h-5 w-5 text-slate-400 transform transition-transform group-hover:translate-x-1" />
@@ -303,7 +330,9 @@ export default function ChannelManagement() {
                 <div className="w-16 h-16 rounded-full bg-slate-700 flex items-center justify-center mx-auto mb-4">
                   <Youtube className="h-8 w-8 text-slate-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">No Channel Selected</h3>
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  No Channel Selected
+                </h3>
                 <p className="text-slate-400">
                   Select a channel from the list to view its analytics
                 </p>

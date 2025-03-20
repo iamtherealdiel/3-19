@@ -55,6 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Test connection and auth state on mount
   useEffect(() => {
+    setLoading(true);
+
     // Check active sessions and sets the user
     supabase.auth
       .getSession()
@@ -63,15 +65,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(currentUser);
         const isAdmin = currentUser?.user_metadata?.role === "admin";
         // If user is verified and just completed email confirmation, show onboarding
-        if (
-          currentUser?.email_confirmed_at &&
-          !currentUser?.user_metadata?.onboarding_complete &&
-          !hasShownVerification
-        ) {
-          setShowOnboarding(true);
-          setHasShownVerification(true);
-          navigate("/dashboard", { replace: true });
-        }
+        console.log(
+          "onboarding ",
+          currentUser?.user_metadata?.onboarding_complete
+        );
 
         // If user is verified, redirect to dashboard
         if (currentUser?.email_confirmed_at && !isRedirected) {
@@ -108,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         !currentUser?.user_metadata?.onboarding_complete &&
         !hasShownVerification
       ) {
-        setShowOnboarding(true);
+        //  setShowOnboarding(true);
         setHasShownVerification(true);
         showUniqueToast(
           "Email verified successfully!",
@@ -193,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data.user?.email_confirmed_at &&
         !data.user?.user_metadata?.onboarding_complete
       ) {
-        setShowOnboarding(true);
+        //    setShowOnboarding(true);
       }
 
       // Successfully signed in and verified

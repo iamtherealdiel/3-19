@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
+import { createPortal } from "react-dom";
 import { formatRelativeTime, formatNumber } from "../utils/dateUtils";
 import {
   LogOut,
@@ -34,11 +35,11 @@ import {
   ThumbsUp,
   DollarSign,
   Music,
-  Wallet
+  Wallet,
 } from "lucide-react";
 import OnboardingPopup from "../components/OnboardingPopup";
 import Swal from "sweetalert2";
-import { Line } from 'react-chartjs-2';
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -48,8 +49,9 @@ import {
   Title,
   Tooltip,
   Legend,
-  Filler
-} from 'chart.js';
+  Filler,
+} from "chart.js";
+import ChannelManagement from "./features/ChannelManagement";
 
 // Register ChartJS components
 ChartJS.register(
@@ -73,13 +75,13 @@ interface Channel {
 
 interface ActivityItem {
   id: string;
-  type: 'view' | 'subscriber' | 'revenue' | 'milestone';
+  type: "view" | "subscriber" | "revenue" | "milestone";
   title: string;
   description: string;
   timestamp: string;
   metadata?: {
     amount?: number;
-    trend?: 'up' | 'down';
+    trend?: "up" | "down";
     percentage?: number;
   };
 }
@@ -106,6 +108,9 @@ export default function Dashboard() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [channels, setChannels] = useState<Channel[]>([]);
+  const [reason, setReason] = useState("");
+  const [isRejected, setIsRejected] = useState(false);
+  const [hasChanel, setHasChanel] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
   const navigate = useNavigate();
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -117,13 +122,13 @@ export default function Dashboard() {
   const [realtimeViews, setRealtimeViews] = useState({
     current: 0,
     last24h: 0,
-    last48h: 0
+    last48h: 0,
   });
   const [performanceData, setPerformanceData] = useState({
     labels: [] as string[],
     views: [] as number[],
     engagement: [] as number[],
-    revenue: [] as number[]
+    revenue: [] as number[],
   });
 
   const handleImageUpload = async (
@@ -172,65 +177,66 @@ export default function Dashboard() {
     // Generate sample activity data
     const sampleActivity: ActivityItem[] = [
       {
-        id: '1',
-        type: 'view',
-        title: 'Viewership Spike',
-        description: 'Your channel "Gaming Adventures" saw a 25% increase in views',
+        id: "1",
+        type: "view",
+        title: "Viewership Spike",
+        description:
+          'Your channel "Gaming Adventures" saw a 25% increase in views',
         timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-        metadata: { amount: 25, trend: 'up' }
+        metadata: { amount: 25, trend: "up" },
       },
       {
-        id: '2',
-        type: 'subscriber',
-        title: 'New Subscriber Milestone',
-        description: 'You\'ve reached 100K subscribers!',
+        id: "2",
+        type: "subscriber",
+        title: "New Subscriber Milestone",
+        description: "You've reached 100K subscribers!",
         timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-        metadata: { amount: 100000 }
+        metadata: { amount: 100000 },
       },
       {
-        id: '3',
-        type: 'revenue',
-        title: 'Revenue Update',
-        description: 'Monthly revenue increased by 15%',
+        id: "3",
+        type: "revenue",
+        title: "Revenue Update",
+        description: "Monthly revenue increased by 15%",
         timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-        metadata: { amount: 15, trend: 'up' }
+        metadata: { amount: 15, trend: "up" },
       },
       {
-        id: '4',
-        type: 'milestone',
-        title: 'Achievement Unlocked',
-        description: 'Your video reached 1M views',
-        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString()
-      }
+        id: "4",
+        type: "milestone",
+        title: "Achievement Unlocked",
+        description: "Your video reached 1M views",
+        timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
+      },
     ];
     setRecentActivity(sampleActivity);
 
     // Set sample goals
     const sampleGoals: GoalProgress[] = [
       {
-        id: '1',
-        title: 'Monthly Views',
+        id: "1",
+        title: "Monthly Views",
         current: 850000,
         target: 1000000,
-        unit: 'views',
-        color: 'indigo'
+        unit: "views",
+        color: "indigo",
       },
       {
-        id: '2',
-        title: 'Subscriber Growth',
+        id: "2",
+        title: "Subscriber Growth",
         current: 75000,
         target: 100000,
-        unit: 'subscribers',
-        color: 'purple'
+        unit: "subscribers",
+        color: "purple",
       },
       {
-        id: '3',
-        title: 'Revenue Target',
+        id: "3",
+        title: "Revenue Target",
         current: 8500,
         target: 10000,
-        unit: 'USD',
-        color: 'green'
-      }
+        unit: "USD",
+        color: "green",
+      },
     ];
     setGoals(sampleGoals);
 
@@ -238,28 +244,34 @@ export default function Dashboard() {
     const last30Days = Array.from({ length: 30 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - (29 - i));
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
     });
 
-    const generateTrendData = () => Array.from({ length: 30 }, () => 
-      Math.floor(Math.random() * 100000) + 50000
-    );
+    const generateTrendData = () =>
+      Array.from(
+        { length: 30 },
+        () => Math.floor(Math.random() * 100000) + 50000
+      );
 
     setPerformanceData({
       labels: last30Days,
       views: generateTrendData(),
-      engagement: generateTrendData().map(n => n * 0.1),
-      revenue: generateTrendData().map(n => n * 0.01)
+      engagement: generateTrendData().map((n) => n * 0.1),
+      revenue: generateTrendData().map((n) => n * 0.01),
     });
 
     // Set sample realtime views
     setRealtimeViews({
       current: Math.floor(Math.random() * 5000) + 1000,
       last24h: Math.floor(Math.random() * 100000) + 50000,
-      last48h: Math.floor(Math.random() * 150000) + 75000
+      last48h: Math.floor(Math.random() * 150000) + 75000,
     });
 
     const fetchStats = async () => {
+      if (!hasChanel) return;
       try {
         // Get current month's views
         const { data: viewsData, error: viewsError } = await supabase.rpc(
@@ -490,15 +502,70 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
+    const fecthUserRequest = async (userId: string) => {
+      const { data: requestData, error: requestError } = await supabase
+        .from("user_requests")
+        .select("status,rejection_reason")
+        .eq("user_id", userId);
+
+      if (requestError) {
+        console.error("Error fetching user requests:", requestError);
+        throw requestError;
+      }
+
+      return requestData;
+    };
+
     if (user?.user_metadata?.role === "admin") {
       navigate("/purple");
       setIsLoading(false);
       return;
+    } else if (user) {
+      fecthUserRequest(user?.id)
+        .then((res) => {
+          console.log(res);
+          if (res.length == 0) {
+            setShowOnboarding(true);
+            setIsLoading(false);
+            return;
+          }
+          if (res[0].status === "pending") {
+            const popup = document.createElement("div");
+            popup.className =
+              "fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900";
+            popup.innerHTML = `
+        <div class="bg-slate-800 rounded-xl p-12 max-w-xl w-full text-center shadow-2xl border-2 border-indigo-500/20">
+          <div class="w-20 h-20 mx-auto mb-8 rounded-full bg-indigo-600/20 flex items-center justify-center">
+            <svg class="w-10 h-10 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="text-3xl font-bold text-white mb-6">Application Submitted</h3>
+          <div class="mb-8">
+            <div class="inline-flex items-center px-4 py-2 rounded-full text-base font-medium bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white relative overflow-hidden shadow-lg" style="background-size: 200% 100%; animation: gradient-wave 3s ease infinite;">
+              Pending
+            </div>
+          </div>
+          <p class="text-slate-300 text-lg mb-4">Your application is under review.</p>
+          <p class="text-slate-400">You will be automatically redirected to your dashboard once your application is approved.</p>
+        </div>
+      `;
+            document.body.appendChild(popup);
+          }
+          if (res[0].status == "approved") {
+            setHasChanel(true);
+          }
+          if (res[0].status == "rejected") {
+            setReason(res[0]?.rejection_reason);
+            setIsRejected(true);
+            setIsLoading(false);
+          }
+          setIsLoading(false);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
     }
-    if (user && !user.user_metadata?.onboarding_complete) {
-      setShowOnboarding(true);
-    }
-    setIsLoading(false);
   }, [user, setShowOnboarding, navigate]);
 
   const navigationItems = [
@@ -510,7 +577,7 @@ export default function Dashboard() {
     {
       name: "Analytics",
       section: "analytics",
-      icon: <BarChart3 className="h-5 w-5" />
+      icon: <BarChart3 className="h-5 w-5" />,
     },
     {
       name: "Channel Management",
@@ -520,12 +587,12 @@ export default function Dashboard() {
     {
       name: "Music",
       section: "music",
-      icon: <Music className="h-5 w-5" />
+      icon: <Music className="h-5 w-5" />,
     },
     {
       name: "Balance",
       section: "balance",
-      icon: <Wallet className="h-5 w-5" />
+      icon: <Wallet className="h-5 w-5" />,
     },
     {
       name: "Digital Rights",
@@ -567,7 +634,42 @@ export default function Dashboard() {
       </div>
     );
   }
-
+  if (isRejected) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="max-w-xl w-full bg-slate-800 rounded-xl p-8 text-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-slate-800/50 to-red-500/5"></div>
+          <div className="relative z-10">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-500/20 flex items-center justify-center">
+              <X className="w-10 h-10 text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-4">
+              Application Rejected
+            </h2>
+            <p className="text-slate-300 mb-6">
+              Unfortunately, your application has been rejected by admin.
+            </p>
+            {reason && (
+              <div className="bg-slate-700/50 rounded-lg p-4 mb-6 text-left">
+                <h3 className="text-white font-semibold mb-2">Reason:</h3>
+                <ul className="text-slate-300 space-y-2 list-disc list-inside">
+                  <li>{reason || "no reason"}</li>
+                </ul>
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={() => handleSignOut()}
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Onboarding Popup */}
@@ -768,10 +870,10 @@ export default function Dashboard() {
                     ? "Analytics"
                     : activeSection === "rights"
                     ? "Digital Rights"
-                   : activeSection === "music"
-                   ? "Music Library"
-                   : activeSection === "balance"
-                   ? "Balance & Earnings"
+                    : activeSection === "music"
+                    ? "Music Library"
+                    : activeSection === "balance"
+                    ? "Balance & Earnings"
                     : "Global Distribution"}
                 </h1>
                 <div className="flex items-center relative z-50">
@@ -791,57 +893,79 @@ export default function Dashboard() {
                           : "text-slate-400"
                       }`}
                     />
-
-                    {/* Notifications Dropdown */}
-                    {showNotifications && (
-                      <div className="dropdown absolute right-0 top-full mt-2 w-96 bg-slate-800/95 backdrop-blur-sm rounded-xl shadow-xl border border-slate-700/50 transform transition-all duration-300 animate-custom-enter">
-                        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-                          <h3 className="text-white font-semibold">
-                            Notifications
-                          </h3>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={markAllAsRead}
-                              className="text-xs text-slate-400 hover:text-white transition-colors"
-                            >
-                              Mark all as read
-                            </button>
-                            <button
-                              onClick={clearNotifications}
-                              className="text-xs text-slate-400 hover:text-white transition-colors"
-                            >
-                              Clear all
-                            </button>
-                          </div>
-                        </div>
-                        <div className="max-h-96 overflow-y-auto">
-                          {notifications.length === 0 ? (
-                            <div className="p-4 text-center text-slate-400">
-                              No notifications
-                            </div>
-                          ) : (
-                            notifications.map((notification) => (
-                              <div
-                                key={notification.id}
-                                className={`p-4 border-b border-slate-700 hover:bg-slate-700/50 transition-all duration-300 ${
-                                  !notification.read ? "bg-indigo-500/5" : ""
-                                }`}
+                    {/* Notifications Dropdown with Apple-style Animation */}
+                    {showNotifications &&
+                      createPortal(
+                        <div
+                          className="dropdown fixed top-16 right-6 w-96 bg-slate-800/95 backdrop-blur-sm rounded-xl shadow-xl border border-slate-700/50 transform transition-all duration-500 z-50"
+                          style={{
+                            animation:
+                              "slide-in-right 0.5s cubic-bezier(0.23, 1, 0.32, 1) forwards",
+                            opacity: 0,
+                            transform: "translateX(20px)",
+                          }}
+                        >
+                          <div className="p-4 border-b border-slate-700 flex justify-between items-center">
+                            <h3 className="text-white font-semibold">
+                              Notifications
+                            </h3>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={markAllAsRead}
+                                className="text-xs text-slate-400 hover:text-white transition-colors"
                               >
-                                <h4 className="text-white font-medium">
-                                  {notification.title}
-                                </h4>
-                                <p className="text-slate-400 text-sm mt-1">
-                                  {notification.content}
-                                </p>
-                                <p className="text-slate-500 text-xs mt-2">
-                                  {notification.time}
-                                </p>
+                                Mark all as read
+                              </button>
+                              <button
+                                onClick={clearNotifications}
+                                className="text-xs text-slate-400 hover:text-white transition-colors"
+                              >
+                                Clear all
+                              </button>
+                            </div>
+                          </div>
+                          <div className="max-h-96 overflow-y-auto">
+                            {notifications.length === 0 ? (
+                              <div className="p-4 text-center text-slate-400">
+                                No notifications
                               </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    )}
+                            ) : (
+                              notifications.map((notification) => (
+                                <div
+                                  key={notification.id}
+                                  className={`p-4 border-b border-slate-700 hover:bg-slate-700/50 transition-all duration-300 ${
+                                    !notification.read ? "bg-indigo-500/5" : ""
+                                  }`}
+                                >
+                                  <h4 className="text-white font-medium">
+                                    {notification.title}
+                                  </h4>
+                                  <p className="text-slate-400 text-sm mt-1">
+                                    {notification.content}
+                                  </p>
+                                  <p className="text-slate-500 text-xs mt-2">
+                                    {notification.time}
+                                  </p>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>,
+                        document.body
+                      )}
+                    {/* Add this CSS to your global styles or component */}
+                    <style jsx>{`
+                      @keyframes slide-in-right {
+                        0% {
+                          opacity: 0;
+                          transform: translateX(20px);
+                        }
+                        100% {
+                          opacity: 1;
+                          transform: translateX(0);
+                        }
+                      }
+                    `}</style>
                   </div>
                   <div
                     className="settings-button p-2 mr-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all duration-200 hover:scale-110 relative"
@@ -1024,7 +1148,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Realtime Views Section */}
                   <div className="col-span-full bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
                     <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
@@ -1040,7 +1164,9 @@ export default function Dashboard() {
                         <p className="text-2xl font-bold text-white">
                           {formatNumber(realtimeViews.current)}
                         </p>
-                        <p className="text-sm text-slate-400">Active viewers right now</p>
+                        <p className="text-sm text-slate-400">
+                          Active viewers right now
+                        </p>
                       </div>
                       <div className="realtime-card wave-animation bg-gradient-to-br from-slate-700/50 via-slate-700/40 to-slate-700/50 rounded-lg p-4 border border-slate-600/30">
                         <div className="flex items-center justify-between mb-2">
@@ -1050,7 +1176,9 @@ export default function Dashboard() {
                         <p className="text-2xl font-bold text-white">
                           {formatNumber(realtimeViews.last24h)}
                         </p>
-                        <p className="text-sm text-slate-400">Total views in past 24h</p>
+                        <p className="text-sm text-slate-400">
+                          Total views in past 24h
+                        </p>
                       </div>
                       <div className="realtime-card wave-animation bg-gradient-to-br from-slate-700/50 via-slate-700/40 to-slate-700/50 rounded-lg p-4 border border-slate-600/30">
                         <div className="flex items-center justify-between mb-2">
@@ -1060,7 +1188,9 @@ export default function Dashboard() {
                         <p className="text-2xl font-bold text-white">
                           {formatNumber(realtimeViews.last48h)}
                         </p>
-                        <p className="text-sm text-slate-400">Total views in past 48h</p>
+                        <p className="text-sm text-slate-400">
+                          Total views in past 48h
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1072,14 +1202,19 @@ export default function Dashboard() {
                       Monthly Goals
                     </h3>
                     <div className="space-y-6">
-                      {goals.map(goal => {
-                        const percentage = Math.round((goal.current / goal.target) * 100);
+                      {goals.map((goal) => {
+                        const percentage = Math.round(
+                          (goal.current / goal.target) * 100
+                        );
                         return (
                           <div key={goal.id} className="space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-slate-300">{goal.title}</span>
+                              <span className="text-slate-300">
+                                {goal.title}
+                              </span>
                               <span className="text-slate-400">
-                                {formatNumber(goal.current)} / {formatNumber(goal.target)} {goal.unit}
+                                {formatNumber(goal.current)} /{" "}
+                                {formatNumber(goal.target)} {goal.unit}
                               </span>
                             </div>
                             <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
@@ -1104,36 +1239,65 @@ export default function Dashboard() {
                       Recent Activity
                     </h3>
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                      {recentActivity.map(activity => (
-                        <div key={activity.id} className="bg-slate-700/50 rounded-lg p-4 flex items-start space-x-4">
-                          <div className={`p-2 rounded-full ${
-                            activity.type === 'view' ? 'bg-blue-500/20' :
-                            activity.type === 'subscriber' ? 'bg-green-500/20' :
-                            activity.type === 'revenue' ? 'bg-purple-500/20' :
-                            'bg-indigo-500/20'
-                          }`}>
-                            {activity.type === 'view' && <Eye className="h-5 w-5 text-blue-400" />}
-                            {activity.type === 'subscriber' && <UsersIcon className="h-5 w-5 text-green-400" />}
-                            {activity.type === 'revenue' && <DollarSign className="h-5 w-5 text-purple-400" />}
-                            {activity.type === 'milestone' && <Award className="h-5 w-5 text-indigo-400" />}
+                      {recentActivity.map((activity) => (
+                        <div
+                          key={activity.id}
+                          className="bg-slate-700/50 rounded-lg p-4 flex items-start space-x-4"
+                        >
+                          <div
+                            className={`p-2 rounded-full ${
+                              activity.type === "view"
+                                ? "bg-blue-500/20"
+                                : activity.type === "subscriber"
+                                ? "bg-green-500/20"
+                                : activity.type === "revenue"
+                                ? "bg-purple-500/20"
+                                : "bg-indigo-500/20"
+                            }`}
+                          >
+                            {activity.type === "view" && (
+                              <Eye className="h-5 w-5 text-blue-400" />
+                            )}
+                            {activity.type === "subscriber" && (
+                              <UsersIcon className="h-5 w-5 text-green-400" />
+                            )}
+                            {activity.type === "revenue" && (
+                              <DollarSign className="h-5 w-5 text-purple-400" />
+                            )}
+                            {activity.type === "milestone" && (
+                              <Award className="h-5 w-5 text-indigo-400" />
+                            )}
                           </div>
                           <div className="flex-1">
                             <div className="flex justify-between items-start">
-                              <h4 className="text-white font-medium">{activity.title}</h4>
-                              <span className="text-sm text-slate-400">{formatRelativeTime(activity.timestamp)}</span>
+                              <h4 className="text-white font-medium">
+                                {activity.title}
+                              </h4>
+                              <span className="text-sm text-slate-400">
+                                {formatRelativeTime(activity.timestamp)}
+                              </span>
                             </div>
-                            <p className="text-slate-300 text-sm mt-1">{activity.description}</p>
+                            <p className="text-slate-300 text-sm mt-1">
+                              {activity.description}
+                            </p>
                             {activity.metadata?.trend && (
-                              <div className={`flex items-center mt-2 ${
-                                activity.metadata.trend === 'up' ? 'text-green-400' : 'text-red-400'
-                              }`}>
-                                {activity.metadata.trend === 'up' ? (
+                              <div
+                                className={`flex items-center mt-2 ${
+                                  activity.metadata.trend === "up"
+                                    ? "text-green-400"
+                                    : "text-red-400"
+                                }`}
+                              >
+                                {activity.metadata.trend === "up" ? (
                                   <TrendingUp className="h-4 w-4 mr-1" />
                                 ) : (
                                   <TrendingDown className="h-4 w-4 mr-1" />
                                 )}
                                 <span className="text-sm">
-                                  {activity.metadata.amount}% {activity.metadata.trend === 'up' ? 'increase' : 'decrease'}
+                                  {activity.metadata.amount}%{" "}
+                                  {activity.metadata.trend === "up"
+                                    ? "increase"
+                                    : "decrease"}
                                 </span>
                               </div>
                             )}
@@ -1155,76 +1319,77 @@ export default function Dashboard() {
                           labels: performanceData.labels,
                           datasets: [
                             {
-                              label: 'Views',
+                              label: "Views",
                               data: performanceData.views,
-                              borderColor: 'rgb(99, 102, 241)',
-                              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                              borderColor: "rgb(99, 102, 241)",
+                              backgroundColor: "rgba(99, 102, 241, 0.1)",
                               tension: 0.4,
-                              fill: true
+                              fill: true,
                             },
                             {
-                              label: 'Engagement Rate',
+                              label: "Engagement Rate",
                               data: performanceData.engagement,
-                              borderColor: 'rgb(168, 85, 247)',
-                              backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                              borderColor: "rgb(168, 85, 247)",
+                              backgroundColor: "rgba(168, 85, 247, 0.1)",
                               tension: 0.4,
-                              fill: true
+                              fill: true,
                             },
                             {
-                              label: 'Revenue',
+                              label: "Revenue",
                               data: performanceData.revenue,
-                              borderColor: 'rgb(34, 197, 94)',
-                              backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                              borderColor: "rgb(34, 197, 94)",
+                              backgroundColor: "rgba(34, 197, 94, 0.1)",
                               tension: 0.4,
-                              fill: true
-                            }
-                          ]
+                              fill: true,
+                            },
+                          ],
                         }}
                         options={{
                           responsive: true,
                           maintainAspectRatio: false,
                           interaction: {
                             intersect: false,
-                            mode: 'index'
+                            mode: "index",
                           },
                           scales: {
                             y: {
                               grid: {
-                                color: 'rgba(148, 163, 184, 0.1)'
+                                color: "rgba(148, 163, 184, 0.1)",
                               },
                               ticks: {
-                                color: 'rgb(148, 163, 184)'
-                              }
+                                color: "rgb(148, 163, 184)",
+                              },
                             },
                             x: {
                               grid: {
-                                color: 'rgba(148, 163, 184, 0.1)'
+                                color: "rgba(148, 163, 184, 0.1)",
                               },
                               ticks: {
-                                color: 'rgb(148, 163, 184)'
-                              }
-                            }
+                                color: "rgb(148, 163, 184)",
+                              },
+                            },
                           },
                           plugins: {
                             legend: {
                               labels: {
-                                color: 'rgb(148, 163, 184)'
-                              }
+                                color: "rgb(148, 163, 184)",
+                              },
                             },
                             tooltip: {
-                              backgroundColor: 'rgba(30, 41, 59, 0.8)',
-                              titleColor: 'rgb(255, 255, 255)',
-                              bodyColor: 'rgb(148, 163, 184)',
-                              borderColor: 'rgba(148, 163, 184, 0.2)',
-                              borderWidth: 1
-                            }
-                          }
+                              backgroundColor: "rgba(30, 41, 59, 0.8)",
+                              titleColor: "rgb(255, 255, 255)",
+                              bodyColor: "rgb(148, 163, 184)",
+                              borderColor: "rgba(148, 163, 184, 0.2)",
+                              borderWidth: 1,
+                            },
+                          },
                         }}
                       />
                     </div>
                   </div>
                 </div>
               )}
+              {activeSection == "channels" && <ChannelManagement />}
               {activeSection !== "overview" && activeSection !== "channels" && (
                 <div className="bg-slate-800 rounded-xl p-12 text-center">
                   <h3 className="text-xl font-semibold text-white mb-2">

@@ -1,25 +1,29 @@
-import React, { useState } from 'react';
-import { X, Check, LogOut, Copy, CheckCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import { X, Check, LogOut, Copy, CheckCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { supabase } from "../lib/supabase";
+import toast from "react-hot-toast";
 
 // Utility to prevent duplicate toasts
 const shownToasts = new Set<string>();
-const showUniqueToast = (message: string, type: 'success' | 'error', id?: string) => {
+const showUniqueToast = (
+  message: string,
+  type: "success" | "error",
+  id?: string
+) => {
   const toastId = id || message;
   if (!shownToasts.has(toastId)) {
     shownToasts.add(toastId);
-    
-    if (type === 'success') {
+
+    if (type === "success") {
       toast.success(message, { id: toastId });
     } else {
       toast.error(message, { id: toastId });
     }
-    
+
     // Remove from tracking after some time
     setTimeout(() => {
       shownToasts.delete(toastId);
@@ -34,25 +38,30 @@ interface OnboardingPopupProps {
   userEmail: string;
 }
 
-export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: OnboardingPopupProps) {
+export default function OnboardingPopup({
+  isOpen,
+  onClose,
+  userId,
+  userEmail,
+}: OnboardingPopupProps) {
   const [step, setStep] = useState(1);
   const [interests, setInterests] = useState({
     channelManagement: false,
     musicPartnerProgram: false,
     digitalRights: false,
-    other: false
+    other: false,
   });
-  const [otherInterest, setOtherInterest] = useState('');
+  const [otherInterest, setOtherInterest] = useState("");
   const [digitalRightsInfo, setDigitalRightsInfo] = useState({
-    website: '',
-    youtubeChannels: ['']
+    website: "",
+    youtubeChannels: [""],
   });
   const [channelInfo, setChannelInfo] = useState({
-    name: '',
-    email: userEmail || '',
-    youtubeLinks: [''],
-    verificationCode: '',
-    verifiedChannels: {} as Record<string, boolean>
+    name: "",
+    email: userEmail || "",
+    youtubeLinks: [""],
+    verificationCode: "",
+    verifiedChannels: {} as Record<string, boolean>,
   });
   const [showChannelPrompt, setShowChannelPrompt] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -64,7 +73,7 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
   // Generate a random verification code when component mounts
   React.useEffect(() => {
     const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-    setChannelInfo(prev => ({ ...prev, verificationCode: code }));
+    setChannelInfo((prev) => ({ ...prev, verificationCode: code }));
   }, []);
 
   const handleCopyVerification = () => {
@@ -78,48 +87,64 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
     try {
       // First check if channel is already registered
       const { data: existingRequest, error: checkError } = await supabase
-        .from('user_requests')
-        .select('id')
-        .filter('youtube_links', 'cs', `{"${channelUrl}"}`)
-        .not('user_id', 'eq', userId)
+        .from("user_requests")
+        .select("id")
+        .filter("youtube_links", "cs", `{"${channelUrl}"}`)
+        .not("user_id", "eq", userId)
         .maybeSingle();
 
       if (checkError) throw checkError;
 
       if (existingRequest) {
-        showUniqueToast('This YouTube channel is already registered with another account', 'error', 'channel-exists');
-        setChannelInfo(prev => ({
+        showUniqueToast(
+          "This YouTube channel is already registered with another account",
+          "error",
+          "channel-exists"
+        );
+        setChannelInfo((prev) => ({
           ...prev,
           verifiedChannels: {
             ...prev.verifiedChannels,
-            [channelUrl]: false
-          }
+            [channelUrl]: false,
+          },
         }));
         return;
       }
 
       // Simulate API call to check channel description
       // In production, this would be a real API call to YouTube's API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       // For demo purposes, randomly verify
-      const isVerified = Math.random() > 0.5;
-      
-      setChannelInfo(prev => ({
+      const isVerified = true;
+
+      setChannelInfo((prev) => ({
         ...prev,
         verifiedChannels: {
           ...prev.verifiedChannels,
-          [channelUrl]: isVerified
-        }
+          [channelUrl]: isVerified,
+        },
       }));
 
       if (isVerified) {
-        showUniqueToast('Channel verified successfully!', 'success', 'channel-verified');
+        showUniqueToast(
+          "Channel verified successfully!",
+          "success",
+          "channel-verified"
+        );
       } else {
-        showUniqueToast('Verification code not found in channel description', 'error', 'verification-failed');
+        showUniqueToast(
+          "Verification code not found in channel description",
+          "error",
+          "verification-failed"
+        );
       }
     } catch (error) {
-      showUniqueToast('Failed to verify channel', 'error', 'verification-error');
+      showUniqueToast(
+        "Failed to verify channel",
+        "error",
+        "verification-error"
+      );
     } finally {
       setIsVerifying(false);
     }
@@ -128,100 +153,138 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
   const handleSignOut = async () => {
     try {
       await signOut();
-      navigate('/login');
+      navigate("/login");
     } catch (error) {
-      console.error('Error signing out:', error);
-      showUniqueToast('Failed to sign out', 'error', 'signout-error');
+      console.error("Error signing out:", error);
+      showUniqueToast("Failed to sign out", "error", "signout-error");
     }
   };
 
   const handleInterestChange = (interest: keyof typeof interests) => {
-    setInterests(prev => ({
+    setInterests((prev) => ({
       ...prev,
-      [interest]: !prev[interest]
+      [interest]: !prev[interest],
     }));
-    
+
     // Show channel prompt when Channel Management is selected
-    if (interest === 'channelManagement') {
-      setShowChannelPrompt(prev => !prev);
+    if (interest === "channelManagement") {
+      setShowChannelPrompt((prev) => !prev);
     }
   };
 
   const handleChannelInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    if (name.startsWith('youtubeLink')) {
-      const index = parseInt(name.replace('youtubeLink', ''));
-      setChannelInfo(prev => ({
+    if (name.startsWith("youtubeLink")) {
+      const index = parseInt(name.replace("youtubeLink", ""));
+      setChannelInfo((prev) => ({
         ...prev,
-        youtubeLinks: prev.youtubeLinks.map((link, i) => i === index ? value : link)
+        youtubeLinks: prev.youtubeLinks.map((link, i) =>
+          i === index ? value : link
+        ),
       }));
     } else {
-      setChannelInfo(prev => ({
+      setChannelInfo((prev) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
     }
   };
 
   const addChannelField = () => {
-    setChannelInfo(prev => ({
+    setChannelInfo((prev) => ({
       ...prev,
-      youtubeLinks: [...prev.youtubeLinks, '']
+      youtubeLinks: [...prev.youtubeLinks, ""],
     }));
   };
 
   const removeChannelField = (index: number) => {
-    setChannelInfo(prev => ({
+    setChannelInfo((prev) => ({
       ...prev,
-      youtubeLinks: prev.youtubeLinks.filter((_, i) => i !== index)
+      youtubeLinks: prev.youtubeLinks.filter((_, i) => i !== index),
     }));
   };
 
   const handleSubmitInterests = async () => {
     // Check if at least one interest is selected
-    if (!interests.channelManagement && !interests.musicPartnerProgram && !interests.digitalRights && !interests.other) {
-      showUniqueToast('Please select at least one option', 'error', 'interests-required');
+    if (
+      !interests.channelManagement &&
+      !interests.musicPartnerProgram &&
+      !interests.digitalRights &&
+      !interests.other
+    ) {
+      showUniqueToast(
+        "Please select at least one option",
+        "error",
+        "interests-required"
+      );
       return;
     }
 
     // If other is selected but no text is provided
     if (interests.other && !otherInterest.trim()) {
-      showUniqueToast('Please specify your other interest', 'error', 'other-interest-required');
+      showUniqueToast(
+        "Please specify your other interest",
+        "error",
+        "other-interest-required"
+      );
       return;
     }
 
     // If Channel Management or Music Partner Program is selected, validate YouTube URLs and verification
-    if ((interests.channelManagement || interests.musicPartnerProgram) && !channelInfo.youtubeLinks[0]) {
-      showUniqueToast('Please provide your YouTube channel URL', 'error', 'youtube-required');
+    if (
+      (interests.channelManagement || interests.musicPartnerProgram) &&
+      !channelInfo.youtubeLinks[0]
+    ) {
+      showUniqueToast(
+        "Please provide your YouTube channel URL",
+        "error",
+        "youtube-required"
+      );
       return;
     }
 
     // Check if all channels are verified
-    if ((interests.channelManagement || interests.musicPartnerProgram)) {
-      const unverifiedChannels = channelInfo.youtubeLinks.filter(link => 
-        link.trim() && !channelInfo.verifiedChannels[link]
+    if (interests.channelManagement || interests.musicPartnerProgram) {
+      const unverifiedChannels = channelInfo.youtubeLinks.filter(
+        (link) => link.trim() && !channelInfo.verifiedChannels[link]
       );
-      
+
       if (unverifiedChannels.length > 0) {
-        showUniqueToast('Please verify all YouTube channels before continuing', 'error', 'unverified-channels');
+        showUniqueToast(
+          "Please verify all YouTube channels before continuing",
+          "error",
+          "unverified-channels"
+        );
         return;
       }
     }
-    
+
     // Validate Digital Rights fields if selected
     if (interests.digitalRights) {
       if (!digitalRightsInfo.website.trim()) {
-        showUniqueToast('Please provide your website URL', 'error', 'website-required');
+        showUniqueToast(
+          "Please provide your website URL",
+          "error",
+          "website-required"
+        );
         return;
       }
       if (!digitalRightsInfo.youtubeChannels[0]?.trim()) {
-        showUniqueToast('Please provide your YouTube channel URL', 'error', 'youtube-required');
+        showUniqueToast(
+          "Please provide your YouTube channel URL",
+          "error",
+          "youtube-required"
+        );
         return;
       }
     }
 
     // Proceed to step 2 for additional info
-    if (((interests.channelManagement || interests.musicPartnerProgram) && channelInfo.youtubeLinks[0]) || interests.digitalRights) {
+    if (
+      ((interests.channelManagement || interests.musicPartnerProgram) &&
+        channelInfo.youtubeLinks[0]) ||
+      interests.digitalRights
+    ) {
       setStep(2);
     } else {
       // If only "other" is selected, submit directly
@@ -236,38 +299,41 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
       const selectedInterests = Object.entries(interests)
         .filter(([_, selected]) => selected)
         .map(([interest, _]) => interest);
-      
-      const { error } = await supabase
-        .from('user_requests')
-        .insert([
-          {
-            user_id: userId,
-            interests: selectedInterests,
-            other_interest: interests.other ? otherInterest : null,
-            website: interests.digitalRights ? digitalRightsInfo.website : null,
-            youtube_channel: interests.digitalRights ? digitalRightsInfo.youtubeChannels[0] : null,
-            name: channelInfo.name || user?.user_metadata?.full_name || '',
-            email: channelInfo.email || userEmail,
-            youtube_links: channelInfo.youtubeLinks.filter(link => link.trim() !== ''),
-            status: 'pending'
-          }
-        ]);
+
+      const { error } = await supabase.from("user_requests").insert([
+        {
+          user_id: userId,
+          interests: selectedInterests,
+          other_interest: interests.other ? otherInterest : null,
+          website: interests.digitalRights ? digitalRightsInfo.website : null,
+          youtube_channel: interests.digitalRights
+            ? digitalRightsInfo.youtubeChannels[0]
+            : null,
+          name: channelInfo.name || user?.user_metadata?.full_name || "",
+          email: channelInfo.email || userEmail,
+          youtube_links: channelInfo.youtubeLinks.filter(
+            (link) => link.trim() !== ""
+          ),
+          status: "pending",
+        },
+      ]);
 
       if (error) {
-        console.error('Error submitting request:', error);
+        console.error("Error submitting request:", error);
         throw new Error(error.message);
       }
 
       // Also update user metadata to mark onboarding as complete
       await supabase.auth.updateUser({
         data: {
-          onboarding_complete: true
-        }
+          onboarding_complete: true,
+        },
       });
 
       // Show submission popup
-      const popup = document.createElement('div');
-      popup.className = 'fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900';
+      const popup = document.createElement("div");
+      popup.className =
+        "fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900";
       popup.innerHTML = `
         <div class="bg-slate-800 rounded-xl p-12 max-w-xl w-full text-center shadow-2xl border-2 border-indigo-500/20">
           <div class="w-20 h-20 mx-auto mb-8 rounded-full bg-indigo-600/20 flex items-center justify-center">
@@ -292,7 +358,11 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
         onClose();
       }, 500);
     } catch (error: any) {
-      showUniqueToast(error.message || 'Failed to submit your information. Please try again.', 'error', 'onboarding-error');
+      showUniqueToast(
+        error.message || "Failed to submit your information. Please try again.",
+        "error",
+        "onboarding-error"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -300,15 +370,19 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
 
   const validateStep2 = () => {
     if (!channelInfo.name.trim()) {
-      showUniqueToast('Please enter your name', 'error', 'name-required');
+      showUniqueToast("Please enter your name", "error", "name-required");
       return false;
     }
     if (!channelInfo.email.trim()) {
-      showUniqueToast('Please enter your email', 'error', 'email-required');
+      showUniqueToast("Please enter your email", "error", "email-required");
       return false;
     }
     if (!channelInfo.youtubeLinks[0]?.trim()) {
-      showUniqueToast('Please enter your YouTube channel link', 'error', 'youtube-required');
+      showUniqueToast(
+        "Please enter your YouTube channel link",
+        "error",
+        "youtube-required"
+      );
       return false;
     }
     return true;
@@ -317,7 +391,7 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
   if (!isOpen) return null;
 
   return (
-    <AnimatePresence mode="wait"> 
+    <AnimatePresence mode="wait">
       <div className="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4 overflow-hidden">
         {/* Floating Cubes Background */}
         <div className="absolute inset-0 overflow-hidden">
@@ -331,7 +405,7 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
                 animationDelay: `${Math.random() * 5}s`,
                 animationDuration: `${10 + Math.random() * 10}s`,
                 transform: `rotate(45deg)`,
-                clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'
+                clipPath: "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)",
               }}
             />
           ))}
@@ -346,7 +420,7 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
           {/* Header */}
           <div className="bg-slate-700 px-6 py-4 flex items-center justify-center border-b border-slate-600">
             <h2 className="text-xl font-bold text-white">
-              {step === 1 ? 'Welcome to MediaTiger!' : 'Channel Information'}
+              {step === 1 ? "Welcome to MediaTiger!" : "Channel Information"}
             </h2>
           </div>
 
@@ -355,51 +429,64 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
             {step === 1 ? (
               <>
                 <p className="text-slate-300 mb-5">
-                  Thank you for verifying your email. To help us serve you better, please let us know what you're here for:
+                  Thank you for verifying your email. To help us serve you
+                  better, please let us know what you're here for:
                 </p>
-                
+
                 <div className="space-y-3 mb-6">
-                  <div 
+                  <div
                     className={`p-3 rounded-lg cursor-pointer flex items-center ${
-                      interests.channelManagement 
-                        ? 'bg-indigo-600/20 border border-indigo-600/30' 
-                        : 'bg-slate-700 border border-slate-600 hover:bg-slate-600'
+                      interests.channelManagement
+                        ? "bg-indigo-600/20 border border-indigo-600/30"
+                        : "bg-slate-700 border border-slate-600 hover:bg-slate-600"
                     }`}
-                    onClick={() => handleInterestChange('channelManagement')}
+                    onClick={() => handleInterestChange("channelManagement")}
                   >
-                    <div className={`w-5 h-5 rounded flex items-center justify-center mr-3 ${
-                      interests.channelManagement 
-                        ? 'bg-indigo-600 text-white' 
-                        : 'bg-slate-600'
-                    }`}>
-                      {interests.channelManagement && <Check className="h-4 w-4" />}
+                    <div
+                      className={`w-5 h-5 rounded flex items-center justify-center mr-3 ${
+                        interests.channelManagement
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-600"
+                      }`}
+                    >
+                      {interests.channelManagement && (
+                        <Check className="h-4 w-4" />
+                      )}
                     </div>
                     <span className="text-white">Channel Management</span>
                   </div>
-                  
-                  <div 
+
+                  <div
                     className={`p-3 rounded-lg cursor-pointer flex items-center ${
-                      interests.musicPartnerProgram 
-                        ? 'bg-indigo-600/20 border border-indigo-600/30' 
-                        : 'bg-slate-700 border border-slate-600 hover:bg-slate-600'
+                      interests.musicPartnerProgram
+                        ? "bg-indigo-600/20 border border-indigo-600/30"
+                        : "bg-slate-700 border border-slate-600 hover:bg-slate-600"
                     }`}
-                    onClick={() => handleInterestChange('musicPartnerProgram')}
+                    onClick={() => handleInterestChange("musicPartnerProgram")}
                   >
-                    <div className={`w-5 h-5 rounded flex items-center justify-center mr-3 ${
-                      interests.musicPartnerProgram 
-                        ? 'bg-indigo-600 text-white' 
-                        : 'bg-slate-600'
-                    }`}>
-                      {interests.musicPartnerProgram && <Check className="h-4 w-4" />}
+                    <div
+                      className={`w-5 h-5 rounded flex items-center justify-center mr-3 ${
+                        interests.musicPartnerProgram
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-600"
+                      }`}
+                    >
+                      {interests.musicPartnerProgram && (
+                        <Check className="h-4 w-4" />
+                      )}
                     </div>
                     <span className="text-white">Music Partner Program</span>
                   </div>
-                  
+
                   {/* Channel URL Prompt - Show if either program is selected */}
-                  {(interests.channelManagement || interests.musicPartnerProgram) && (
+                  {(interests.channelManagement ||
+                    interests.musicPartnerProgram) && (
                     <div className="mt-2 pl-8 animate-fadeIn">
                       {channelInfo.youtubeLinks.map((link, index) => (
-                        <div key={index} className="flex items-center space-x-2 mb-2">
+                        <div
+                          key={index}
+                          className="flex items-center space-x-2 mb-2"
+                        >
                           <input
                             type="text"
                             name={`youtubeLink${index}`}
@@ -426,17 +513,21 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
                         <Check className="h-4 w-4 mr-1" />
                         Add another channel
                       </button>
-                    
+
                       {/* Verification Section */}
                       <div className="mt-4 bg-slate-800/70 rounded-lg p-4 border border-slate-600">
-                        <h3 className="text-sm font-medium text-slate-300 mb-2">Verification</h3>
+                        <h3 className="text-sm font-medium text-slate-300 mb-2">
+                          Verification
+                        </h3>
                         <p className="text-xs text-slate-400 mb-4">
-                          On the Youtube website, go to View your channel &gt; Customize channel &gt;
-                          Scroll down to &quot;Description&quot;, enter the verification code &gt; Publish in the top right corner.
-                          This is to ensure that you own the channel you link. You can remove it once your application 
-                          has been accepted.
+                          On the Youtube website, go to View your channel &gt;
+                          Customize channel &gt; Scroll down to
+                          &quot;Description&quot;, enter the verification code
+                          &gt; Publish in the top right corner. This is to
+                          ensure that you own the channel you link. You can
+                          remove it once your application has been accepted.
                         </p>
-                        
+
                         <div className="flex items-center space-x-2 bg-slate-700/70 p-2 rounded-md">
                           <code className="text-indigo-400 flex-1 font-mono">
                             {channelInfo.verificationCode}
@@ -453,108 +544,141 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
                             )}
                           </button>
                         </div>
-                        
+
                         {/* Verification Status */}
                         <div className="mt-4 space-y-2">
-                          {channelInfo.youtubeLinks.map((link, index) => (
-                            link.trim() && (
-                              <div key={index} className="flex items-center justify-between bg-slate-700/50 p-2 rounded">
-                                <div className="flex items-center space-x-2 flex-1">
-                                  {channelInfo.verifiedChannels[link] === false ? (
-                                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-red-500/20 text-red-400">
-                                      <X className="h-4 w-4" />
-                                    </div>
-                                  ) : channelInfo.verifiedChannels[link] === true ? (
-                                    <div className="w-6 h-6 rounded-full flex items-center justify-center bg-green-500/20 text-green-400">
-                                      <Check className="h-4 w-4" />
-                                    </div>
-                                  ) : null}
-                                  <span className="text-sm text-slate-300 truncate max-w-[200px]">{link}</span>
-                                </div>
-                                <button
-                                  onClick={() => verifyChannel(link)}
-                                  disabled={isVerifying}
-                                  className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                          {channelInfo.youtubeLinks.map(
+                            (link, index) =>
+                              link.trim() && (
+                                <div
+                                  key={index}
+                                  className="flex items-center justify-between bg-slate-700/50 p-2 rounded"
                                 >
-                                  {isVerifying ? 'Checking...' : 'Verify'}
-                                </button>
-                              </div>
-                            )
-                          ))}
+                                  <div className="flex items-center space-x-2 flex-1">
+                                    {channelInfo.verifiedChannels[link] ===
+                                    false ? (
+                                      <div className="w-6 h-6 rounded-full flex items-center justify-center bg-red-500/20 text-red-400">
+                                        <X className="h-4 w-4" />
+                                      </div>
+                                    ) : channelInfo.verifiedChannels[link] ===
+                                      true ? (
+                                      <div className="w-6 h-6 rounded-full flex items-center justify-center bg-green-500/20 text-green-400">
+                                        <Check className="h-4 w-4" />
+                                      </div>
+                                    ) : null}
+                                    <span className="text-sm text-slate-300 truncate max-w-[200px]">
+                                      {link}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => verifyChannel(link)}
+                                    disabled={isVerifying}
+                                    className="px-3 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                                  >
+                                    {isVerifying ? "Checking..." : "Verify"}
+                                  </button>
+                                </div>
+                              )
+                          )}
                         </div>
                       </div>
                     </div>
                   )}
-                  
-                  <div 
+
+                  <div
                     className={`p-3 rounded-lg cursor-pointer flex items-center ${
-                      interests.digitalRights 
-                        ? 'bg-indigo-600/20 border border-indigo-600/30' 
-                        : 'bg-slate-700 border border-slate-600 hover:bg-slate-600'
+                      interests.digitalRights
+                        ? "bg-indigo-600/20 border border-indigo-600/30"
+                        : "bg-slate-700 border border-slate-600 hover:bg-slate-600"
                     }`}
-                    onClick={() => handleInterestChange('digitalRights')}
+                    onClick={() => handleInterestChange("digitalRights")}
                   >
-                    <div className={`w-5 h-5 rounded flex items-center justify-center mr-3 ${
-                      interests.digitalRights 
-                        ? 'bg-indigo-600 text-white' 
-                        : 'bg-slate-600'
-                    }`}>
+                    <div
+                      className={`w-5 h-5 rounded flex items-center justify-center mr-3 ${
+                        interests.digitalRights
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-600"
+                      }`}
+                    >
                       {interests.digitalRights && <Check className="h-4 w-4" />}
                     </div>
                     <span className="text-white">Digital Rights</span>
                   </div>
-                  
+
                   {/* Digital Rights Fields */}
                   {interests.digitalRights && (
                     <div className="mt-2 pl-8 space-y-3 animate-fadeIn">
                       <div>
-                        <label htmlFor="website" className="block text-sm font-medium text-slate-300 mb-1">
+                        <label
+                          htmlFor="website"
+                          className="block text-sm font-medium text-slate-300 mb-1"
+                        >
                           Website URL
                         </label>
                         <input
                           type="text"
                           id="website"
                           value={digitalRightsInfo.website}
-                          onChange={(e) => setDigitalRightsInfo(prev => ({ ...prev, website: e.target.value }))}
+                          onChange={(e) =>
+                            setDigitalRightsInfo((prev) => ({
+                              ...prev,
+                              website: e.target.value,
+                            }))
+                          }
                           placeholder="https://your-website.com"
                           className="w-full bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="block text-sm font-medium text-slate-300">YouTube Channel URLs</label>
-                        {digitalRightsInfo.youtubeChannels.map((channel, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <input
-                              type="text"
-                              value={channel}
-                              onChange={(e) => {
-                                const newChannels = [...digitalRightsInfo.youtubeChannels];
-                                newChannels[index] = e.target.value;
-                                setDigitalRightsInfo(prev => ({ ...prev, youtubeChannels: newChannels }));
-                              }}
-                              placeholder="https://youtube.com/c/yourchannel"
-                              className="flex-1 bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            />
-                            {index > 0 && (
-                              <button
-                                onClick={() => {
-                                  setDigitalRightsInfo(prev => ({
+                        <label className="block text-sm font-medium text-slate-300">
+                          YouTube Channel URLs
+                        </label>
+                        {digitalRightsInfo.youtubeChannels.map(
+                          (channel, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center space-x-2"
+                            >
+                              <input
+                                type="text"
+                                value={channel}
+                                onChange={(e) => {
+                                  const newChannels = [
+                                    ...digitalRightsInfo.youtubeChannels,
+                                  ];
+                                  newChannels[index] = e.target.value;
+                                  setDigitalRightsInfo((prev) => ({
                                     ...prev,
-                                    youtubeChannels: prev.youtubeChannels.filter((_, i) => i !== index)
+                                    youtubeChannels: newChannels,
                                   }));
                                 }}
-                                className="p-2 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded transition-colors"
-                              >
-                                <X className="h-5 w-5" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                                placeholder="https://youtube.com/c/yourchannel"
+                                className="flex-1 bg-slate-700 border border-slate-600 rounded-md px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                              />
+                              {index > 0 && (
+                                <button
+                                  onClick={() => {
+                                    setDigitalRightsInfo((prev) => ({
+                                      ...prev,
+                                      youtubeChannels:
+                                        prev.youtubeChannels.filter(
+                                          (_, i) => i !== index
+                                        ),
+                                    }));
+                                  }}
+                                  className="p-2 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded transition-colors"
+                                >
+                                  <X className="h-5 w-5" />
+                                </button>
+                              )}
+                            </div>
+                          )
+                        )}
                         <button
                           onClick={() => {
-                            setDigitalRightsInfo(prev => ({
+                            setDigitalRightsInfo((prev) => ({
                               ...prev,
-                              youtubeChannels: [...prev.youtubeChannels, '']
+                              youtubeChannels: [...prev.youtubeChannels, ""],
                             }));
                           }}
                           type="button"
@@ -566,28 +690,33 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
                       </div>
                     </div>
                   )}
-                  
-                  <div 
+
+                  <div
                     className={`p-3 rounded-lg cursor-pointer flex items-center ${
-                      interests.other 
-                        ? 'bg-indigo-600/20 border border-indigo-600/30' 
-                        : 'bg-slate-700 border border-slate-600 hover:bg-slate-600'
+                      interests.other
+                        ? "bg-indigo-600/20 border border-indigo-600/30"
+                        : "bg-slate-700 border border-slate-600 hover:bg-slate-600"
                     }`}
-                    onClick={() => handleInterestChange('other')}
+                    onClick={() => handleInterestChange("other")}
                   >
-                    <div className={`w-5 h-5 rounded flex items-center justify-center mr-3 ${
-                      interests.other 
-                        ? 'bg-indigo-600 text-white' 
-                        : 'bg-slate-600'
-                    }`}>
+                    <div
+                      className={`w-5 h-5 rounded flex items-center justify-center mr-3 ${
+                        interests.other
+                          ? "bg-indigo-600 text-white"
+                          : "bg-slate-600"
+                      }`}
+                    >
                       {interests.other && <Check className="h-4 w-4" />}
                     </div>
                     <span className="text-white">Other</span>
                   </div>
-                  
+
                   {interests.other && (
                     <div className="mt-2 pl-8">
-                      <label htmlFor="otherDescription" className="block text-sm font-medium text-slate-300 mb-1">
+                      <label
+                        htmlFor="otherDescription"
+                        className="block text-sm font-medium text-slate-300 mb-1"
+                      >
                         Please describe what you're interested in
                       </label>
                       <textarea
@@ -605,12 +734,16 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
             ) : (
               <>
                 <p className="text-slate-300 mb-5">
-                  Please provide your channel information so we can better assist you:
+                  Please provide your channel information so we can better
+                  assist you:
                 </p>
-                
+
                 <div className="space-y-4 mb-6">
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-1">
+                    <label
+                      htmlFor="name"
+                      className="block text-sm font-medium text-slate-300 mb-1"
+                    >
                       Full Name
                     </label>
                     <input
@@ -623,9 +756,12 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
                       placeholder="Your full name"
                     />
                   </div>
-                  
+
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1">
+                    <label
+                      htmlFor="email"
+                      className="block text-sm font-medium text-slate-300 mb-1"
+                    >
                       Email Address
                     </label>
                     <input
@@ -638,21 +774,29 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
                       placeholder="Your email address"
                     />
                   </div>
-                  
+
                   <div>
-                    <label htmlFor="youtubeLink" className="block text-sm font-medium text-slate-300 mb-1">
+                    <label
+                      htmlFor="youtubeLink"
+                      className="block text-sm font-medium text-slate-300 mb-1"
+                    >
                       Verified YouTube Channels
                     </label>
-                    {channelInfo.youtubeLinks.filter(link => channelInfo.verifiedChannels[link]).map((link, index) => (
-                      <div key={index} className="flex items-center space-x-2 mb-2">
-                        <div className="flex items-center space-x-2 flex-1 bg-slate-700 border border-slate-600 rounded-md px-3 py-2">
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center bg-green-500/20 text-green-400">
-                            <Check className="h-4 w-4" />
+                    {channelInfo.youtubeLinks
+                      .filter((link) => channelInfo.verifiedChannels[link])
+                      .map((link, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center space-x-2 mb-2"
+                        >
+                          <div className="flex items-center space-x-2 flex-1 bg-slate-700 border border-slate-600 rounded-md px-3 py-2">
+                            <div className="w-6 h-6 rounded-full flex items-center justify-center bg-green-500/20 text-green-400">
+                              <Check className="h-4 w-4" />
+                            </div>
+                            <span className="text-white">{link}</span>
                           </div>
-                          <span className="text-white">{link}</span>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 </div>
               </>
@@ -674,7 +818,7 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
                 disabled={isSubmitting}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Submitting...' : 'Continue'}
+                {isSubmitting ? "Submitting..." : "Continue"}
               </button>
             ) : (
               <div className="flex space-x-3">
@@ -693,7 +837,7 @@ export default function OnboardingPopup({ isOpen, onClose, userId, userEmail }: 
                   disabled={isSubmitting}
                   className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Submit'}
+                  {isSubmitting ? "Submitting..." : "Submit"}
                 </button>
               </div>
             )}
