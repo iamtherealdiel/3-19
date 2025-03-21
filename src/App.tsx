@@ -31,8 +31,6 @@ function App() {
       "/welcome": "Welcome",
       "/dashboard": "Dashboard",
       "/features/channel-management": "Channel Management",
-      "/features/digital-rights": "Digital Rights",
-      "/features/global-distribution": "Global Distribution",
       "/features/boutique-monetization": "Boutique Monetization",
       "/purple": "Admin Panel",
       "/messages": "Messages",

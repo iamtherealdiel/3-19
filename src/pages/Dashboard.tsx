@@ -113,6 +113,9 @@ export default function Dashboard() {
   const [hasChanel, setHasChanel] = useState(false);
   const [activeSection, setActiveSection] = useState("overview");
   const navigate = useNavigate();
+  const [notification, setNotification] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [notificationType, setNotificationType] = useState("info");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(
     user?.user_metadata?.avatar_url || null
@@ -307,6 +310,96 @@ export default function Dashboard() {
   }, [user]);
 
   // Effect to fetch and subscribe to notifications
+  const handleNotifications = (payload) => {
+    const notif = payload.new;
+    if (notif?.user_id === user?.id) {
+      const { content, title, type } = notif;
+      console.log({ content, title, type });
+      setNotification({ content, title, type });
+      setNotificationType(type);
+      setIsVisible(true);
+    }
+  };
+  useEffect(() => {
+    let timer;
+    if (isVisible) {
+      timer = setTimeout(() => {
+        setIsVisible(false);
+      }, 5000);
+    }
+    return () => clearTimeout(timer);
+  }, [isVisible]);
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case "success":
+        return (
+          <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+        );
+      case "warning":
+        return (
+          <div className="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-white">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+          </div>
+        );
+      case "error":
+        return (
+          <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center text-white">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+          </div>
+        );
+      case "info":
+      default:
+        return (
+          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+          </div>
+        );
+    }
+  };
   useEffect(() => {
     if (!user) return;
 
@@ -340,30 +433,8 @@ export default function Dashboard() {
       .channel("notifications")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "notifications",
-          filter: `user_id=eq.${user.id}`,
-        },
-        async (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newNotification = {
-              id: payload.new.id,
-              title: payload.new.title,
-              content: payload.new.content,
-              time: formatRelativeTime(payload.new.created_at),
-              read: payload.new.read,
-            };
-
-            setNotifications((prev) => [newNotification, ...prev]);
-            setHasNewNotification(true);
-
-            // Play notification sound
-            const audio = new Audio("/notification.mp3");
-            audio.play().catch(() => {}); // Ignore errors if sound can't play
-          }
-        }
+        { event: "INSERT", schema: "public", table: "notifications" },
+        handleNotifications
       )
       .subscribe();
 
@@ -429,6 +500,17 @@ export default function Dashboard() {
 
   const handleSignOut = async () => {
     try {
+      if (isRejected) {
+        supabase
+          .rpc("delete_user_request", { request_id: user?.id })
+          .then(({ data, error }) => {
+            if (error) {
+              console.error("Error deleting user request:", error);
+            } else {
+              console.log("User request deleted successfully:", data);
+            }
+          });
+      }
       await signOut();
     } catch (error) {
       console.error("Error signing out:", error);
@@ -594,16 +676,6 @@ export default function Dashboard() {
       section: "balance",
       icon: <Wallet className="h-5 w-5" />,
     },
-    {
-      name: "Digital Rights",
-      section: "rights",
-      icon: <Shield className="h-5 w-5" />,
-    },
-    {
-      name: "Global Distribution",
-      section: "distribution",
-      icon: <Globe className="h-5 w-5" />,
-    },
   ];
 
   const userStats = {
@@ -673,6 +745,30 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Onboarding Popup */}
+      {isVisible && notification && (
+        <div className="fixed top-2 left-0 right-0 mx-auto w-80 z-50 animate-slide-in">
+          <div
+            className="
+            bg-gray-200/90 backdrop-blur-md
+            p-3 rounded-2xl shadow-lg 
+            border border-gray-300/40
+          "
+          >
+            <div className="flex items-start">
+              {getTypeIcon(notificationType)}
+              <div className="ml-3 flex-1 pt-1">
+                <div className="text-gray-800 font-semibold text-base">
+                  {notification?.title}
+                </div>
+                <div className="text-gray-700 text-sm">
+                  {notification?.content}
+                </div>
+              </div>
+              <div className="text-gray-500 text-xs self-start pt-1">now</div>
+            </div>
+          </div>
+        </div>
+      )}
       {showOnboarding && user && (
         <OnboardingPopup
           isOpen={showOnboarding}

@@ -107,13 +107,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ) {
         //  setShowOnboarding(true);
         setHasShownVerification(true);
-        showUniqueToast(
-          "Email verified successfully!",
-          "success",
-          "email-verified"
-        );
+
+        if (!currentUser?.user_metadata?.email_verification_notification) {
+          supabase.auth.updateUser({
+            data: {
+              email_verification_notification: true,
+            },
+          });
+          showUniqueToast(
+            "Email verified successfully!",
+            "success",
+            "email-verified"
+          );
+        }
+        console.log(currentUser.user_metadata);
         navigate("/dashboard", { replace: true });
       }
+
       // Only redirect to admin panel if not already on messages page
       if (isAdmin && !location.pathname.includes("/messages")) {
         setLoading(false);

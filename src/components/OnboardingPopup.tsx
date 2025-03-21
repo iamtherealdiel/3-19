@@ -90,6 +90,7 @@ export default function OnboardingPopup({
         .from("user_requests")
         .select("id")
         .filter("youtube_links", "cs", `{"${channelUrl}"}`)
+        .filter("status", "eq", "approved")
         .not("user_id", "eq", userId)
         .maybeSingle();
 
