@@ -152,7 +152,7 @@ export default function ChannelManagement() {
               </div>
 
               <div className="space-y-4">
-                {channels.map((channel) => (
+                {channels?.map((channel) => (
                   <button
                     key={channel.url}
                     onClick={() => setSelectedChannel(channel)}

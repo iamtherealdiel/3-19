@@ -52,6 +52,7 @@ import {
   Filler,
 } from "chart.js";
 import ChannelManagement from "./features/ChannelManagement";
+import BalanceSection from "./features/BalanceComponent";
 
 // Register ChartJS components
 ChartJS.register(
@@ -1486,16 +1487,19 @@ export default function Dashboard() {
                 </div>
               )}
               {activeSection == "channels" && <ChannelManagement />}
-              {activeSection !== "overview" && activeSection !== "channels" && (
-                <div className="bg-slate-800 rounded-xl p-12 text-center">
-                  <h3 className="text-xl font-semibold text-white mb-2">
-                    Coming Soon
-                  </h3>
-                  <p className="text-slate-400">
-                    This section is currently under development
-                  </p>
-                </div>
-              )}
+              {activeSection == "balance" && <BalanceSection />}
+              {activeSection !== "overview" &&
+                activeSection !== "channels" &&
+                activeSection !== "balance" && (
+                  <div className="bg-slate-800 rounded-xl p-12 text-center">
+                    <h3 className="text-xl font-semibold text-white mb-2">
+                      Coming Soon
+                    </h3>
+                    <p className="text-slate-400">
+                      This section is currently under development
+                    </p>
+                  </div>
+                )}
             </div>
           </div>
         </main>
