@@ -18,6 +18,8 @@ import {
   FileSpreadsheet,
   MessageSquare,
   Bell,
+  YoutubeIcon,
+  LucideYoutube,
 } from "lucide-react";
 import {
   lookupUserBySecureId,
@@ -68,6 +70,7 @@ export default function AdminPanel() {
   const [userLookupError, setUserLookupError] = useState("");
   const [accessLogs, setAccessLogs] = useState<AccessLogItem[]>([]);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [channelsRequests, setChannelRequests] = useState<any[] | null>(null);
   const [activeTab, setActiveTab] = useState("applications");
   const [applications, setApplications] = useState<ApplicationData[] | null>(
     null
@@ -102,6 +105,8 @@ export default function AdminPanel() {
   useEffect(() => {
     if (activeTab === "applications") {
       loadApplications();
+    } else if (activeTab == "yt-channels") {
+      loadRequests();
     }
   }, [activeTab, applicationFilter]);
 
@@ -123,32 +128,65 @@ export default function AdminPanel() {
       setIsLoadingApplications(false);
     }
   };
-
+  const loadRequests = async () => {
+    setIsLoadingApplications(true);
+    try {
+      const { data, error } = await supabase
+        .from("channels")
+        .select("*")
+        .eq("status", applicationFilter);
+      console.log(data);
+      if (error) throw error;
+      setChannelRequests(data || []);
+    } catch (err) {
+      console.error("Error loading applications:", err);
+      toast.error("Failed to load applications");
+    } finally {
+      setIsLoadingApplications(false);
+    }
+  };
   const handleApplicationStatus = async (
     id: string,
     status: "approved" | "rejected",
     reason?: string
   ) => {
     try {
-      const {
-        data,
-        error,
-        status: reqStats,
-        count,
-      } = await supabase.rpc("update_application_status_with_admin", {
-        admin_id: adminId, // First parameter
-        application_id: id, // Second parameter
-        new_status: status, // Third parameter
-        reason: status === "rejected" ? reason : `Application ${status}`, // Fourth parameter
-      });
+      if (activeTab == "applciations") {
+        const {
+          data,
+          error,
+          status: reqStats,
+          count,
+        } = await supabase.rpc("update_application_status_with_admin", {
+          admin_id: adminId, // First parameter
+          application_id: id, // Second parameter
+          new_status: status, // Third parameter
+          reason: status === "rejected" ? reason : `Application ${status}`, // Fourth parameter
+        });
 
-      if (error) throw error;
-      console.log(data, reqStats, count);
-      toast.success(`Application ${status} successfully`);
+        if (error) throw error;
+        console.log(data, reqStats, count);
+        toast.success(`Application ${status} successfully`);
+        setShowRejectionModal(false);
+        setRejectionReason("");
+        setSelectedApplicationId(null);
+        loadApplications(); // Reload the applications list
+      } else if (activeTab == "yt-channels") {
+        await supabase
+          .from("channels")
+          .update({
+            viewed_by: adminId, // First parameter
+            status: status, // Third parameter
+            reason: status === "rejected" ? reason : `Application ${status}`, // Fourth parameter
+          })
+          .eq("id", id);
+      }
+      loadRequests();
+      toast.success(`Channel request ${status} successfully`);
       setShowRejectionModal(false);
       setRejectionReason("");
       setSelectedApplicationId(null);
-      loadApplications(); // Reload the applications list
+      loadApplications();
     } catch (err) {
       console.error("Error updating application status:", err);
       toast.error("Failed to update application status");
@@ -312,9 +350,22 @@ export default function AdminPanel() {
                   <Bell className="h-4 w-4 mr-1" />
                   Notifications
                 </div>
+              </button>{" "}
+              <button
+                onClick={() => setActiveTab("yt-channels")}
+                className={`py-2 px-4 md:py-3 md:px-6 font-medium text-sm flex items-center transition-colors relative ${
+                  activeTab === "yt-channels"
+                    ? "text-indigo-400 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-gradient-to-r after:from-indigo-500 after:to-purple-500"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <div className="flex items-center">
+                  <LucideYoutube className="h-4 w-4 mr-1" />
+                  Channels
+                </div>
               </button>
               <Link
-                to="/messages"
+                to="/youtube-channels"
                 className="py-2 px-4 md:py-3 md:px-6 font-medium text-sm flex items-center transition-colors text-slate-400 hover:text-white"
               >
                 <MessageSquare className="h-4 w-4 mr-1" />
@@ -690,6 +741,204 @@ export default function AdminPanel() {
                     }}
                   />
                 </div>
+              </div>
+            )}
+            {activeTab === "yt-channels" && (
+              <div>
+                <div className="bg-slate-700/30 backdrop-blur-sm rounded-xl p-3 md:p-6 mb-6">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <h2 className="text-lg font-semibold text-white flex items-center">
+                      <FileSpreadsheet className="h-5 w-5 text-indigo-400 mr-2" />
+                      Channels Requests
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={applicationFilter}
+                        onChange={(e) => setApplicationFilter(e.target.value)}
+                        className="flex-1 md:flex-none bg-slate-800/50 border border-slate-600/50 rounded-lg px-3 py-1.5 md:px-4 md:py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors hover:border-indigo-500/50"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                      <button
+                        onClick={loadApplications}
+                        disabled={isLoadingApplications}
+                        className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-slate-700/50 rounded-lg transition-colors"
+                      >
+                        <RefreshCw
+                          className={`h-5 w-5 ${
+                            isLoadingApplications ? "animate-spin" : ""
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isLoadingApplications ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                      <p className="text-slate-300">Loading applications...</p>
+                    </div>
+                  ) : !channelsRequests || channelsRequests.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400">
+                      <p>No {applicationFilter} applications found</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {channelsRequests?.map((app) => (
+                        <div
+                          key={app.id}
+                          className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 md:p-6 border border-slate-700/50 hover:border-indigo-500/50 transition-all duration-300 group"
+                        >
+                          <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
+                            <div>
+                              <h3 className="text-lg font-medium text-white">
+                                {app.channel_name ||
+                                  (app.link &&
+                                    app.link.replace(
+                                      /^(https?:\/\/)?(www\.)?(youtube\.com\/channel\/|youtube\.com\/c\/|youtube\.com\/@)?/,
+                                      ""
+                                    ))}
+                              </h3>
+                              <p className="text-slate-400">{app.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {app.status === "pending" && (
+                                <>
+                                  <button
+                                    onClick={() =>
+                                      handleApplicationStatus(
+                                        app.id,
+                                        "approved"
+                                      )
+                                    }
+                                    className="px-4 py-2 bg-green-600/90 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center shadow-lg shadow-green-500/10 hover:shadow-green-500/20"
+                                  >
+                                    <UserCheck className="h-4 w-4 mr-1" />
+                                    Approve
+                                  </button>
+                                  <button
+                                    className="px-4 py-2 bg-red-600/90 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center shadow-lg shadow-red-500/10 hover:shadow-red-500/20"
+                                    onClick={() => handleReject(app.id)}
+                                  >
+                                    <UserX className="h-4 w-4 mr-1" />
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                            <div>
+                              <h4 className="text-sm font-medium text-slate-400 mb-2">
+                                Interests
+                              </h4>
+                              <div className="flex flex-wrap gap-2">
+                                {app.interests
+                                  ?.sort()
+                                  .map((interest, index) => (
+                                    <span
+                                      key={index}
+                                      className="px-2 py-1 bg-slate-700 rounded-md text-xs text-slate-300"
+                                    >
+                                      {interest}
+                                    </span>
+                                  ))}
+                              </div>
+                              {app.other_interest && (
+                                <p className="mt-2 text-sm text-slate-300">
+                                  Other: {app.other_interest}
+                                </p>
+                              )}
+                            </div>
+
+                            <div>
+                              <h4 className="text-sm font-medium text-slate-400 mb-2">
+                                YouTube Channels
+                              </h4>
+                              <div className="space-y-2">
+                                {app.youtube_links?.map(
+                                  (link, index) =>
+                                    link && (
+                                      <div
+                                        key={index}
+                                        className="flex items-center justify-between bg-slate-700/50 rounded-lg p-3 group-hover:bg-slate-700 transition-colors"
+                                      >
+                                        <a
+                                          href={link}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-sm text-indigo-400 hover:text-indigo-300 truncate max-w-full"
+                                        >
+                                          {link}
+                                        </a>
+                                      </div>
+                                    )
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-6 pt-4 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-400">
+                            <span>
+                              Submitted:{" "}
+                              {new Date(app.created_at).toLocaleString()}
+                            </span>
+                            <span
+                              className={`px-2 py-1 rounded-full ${
+                                app.status === "pending"
+                                  ? "bg-yellow-500/20 text-yellow-300"
+                                  : app.status === "approved"
+                                  ? "bg-green-500/20 text-green-300"
+                                  : "bg-red-500/20 text-red-300"
+                              }`}
+                            >
+                              {app.status.charAt(0).toUpperCase() +
+                                app.status.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Rejection Modal */}
+                {showRejectionModal && (
+                  <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full border border-slate-700/50 shadow-xl">
+                      <h3 className="text-xl font-semibold text-white mb-4">
+                        Provide Rejection Reason
+                      </h3>
+                      <textarea
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        placeholder="Enter reason for rejection..."
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4 h-32 resize-none"
+                      />
+                      <div className="flex justify-end space-x-3">
+                        <button
+                          onClick={() => {
+                            setShowRejectionModal(false);
+                            setRejectionReason("");
+                            setSelectedApplicationId(null);
+                          }}
+                          className="px-4 py-2 text-slate-300 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleRejectionSubmit}
+                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                        >
+                          Confirm Rejection
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
