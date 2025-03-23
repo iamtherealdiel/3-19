@@ -385,7 +385,7 @@ const BalanceSection = () => {
         )}
         {/* Contract Agreement */}
 
-        {(hasContract || checked) && (
+        {checked && (
           <div className="bg-gray-800 rounded-lg p-6 my-6">
             <div className="flex items-start mb-4">
               <FileText className="w-5 h-5 mr-3 mt-1 text-gray-400" />
