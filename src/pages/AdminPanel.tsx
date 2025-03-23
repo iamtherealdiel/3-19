@@ -180,13 +180,14 @@ export default function AdminPanel() {
             reason: status === "rejected" ? reason : `Application ${status}`, // Fourth parameter
           })
           .eq("id", id);
+
+        loadRequests();
+        toast.success(`Channel request ${status} successfully`);
+        setShowRejectionModal(false);
+        setRejectionReason("");
+        setSelectedApplicationId(null);
+        loadApplications();
       }
-      loadRequests();
-      toast.success(`Channel request ${status} successfully`);
-      setShowRejectionModal(false);
-      setRejectionReason("");
-      setSelectedApplicationId(null);
-      loadApplications();
     } catch (err) {
       console.error("Error updating application status:", err);
       toast.error("Failed to update application status");

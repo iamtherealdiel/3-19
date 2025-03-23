@@ -68,12 +68,10 @@ export default function ChannelManagement() {
           (!channelsData || channelsData.length === 0)
         ) {
           setError("No channels linked to your account");
-          setIsLoading(false);
         }
 
         if (!requestData[0]?.user_requests.youtube_links?.length) {
           setError("No channels linked to your account");
-          setIsLoading(false);
         }
 
         // Get views data for each channel
@@ -184,7 +182,7 @@ export default function ChannelManagement() {
     );
   }
 
-  if (error && channels.length === 0) {
+  if (error && channels.length === 0 && !isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
         {showAddChannelModal && (

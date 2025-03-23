@@ -118,6 +118,7 @@ export default function Dashboard() {
   const [isVisible, setIsVisible] = useState(false);
   const [notificationType, setNotificationType] = useState("info");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [notifNumber, setNotifNumber] = useState<any>(0);
   const [profileImage, setProfileImage] = useState<string | null>(
     user?.user_metadata?.avatar_url || null
   );
@@ -134,6 +135,23 @@ export default function Dashboard() {
     engagement: [] as number[],
     revenue: [] as number[],
   });
+  const getNotifNumber = async () => {
+    try {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact" }) // Correct way to count rows in Supabase
+        .eq("read", false)
+        .eq("user_id", user?.id);
+
+      if (error) throw error;
+
+      console.log("Unread notifications:", count);
+      return count; // Return the count if needed elsewhere
+    } catch (error) {
+      console.error("Error fetching notification count:", error);
+      return 0; // Return 0 in case of an error
+    }
+  };
 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
@@ -428,7 +446,9 @@ export default function Dashboard() {
     };
 
     fetchNotifications();
-
+    getNotifNumber().then((res) => {
+      setNotifNumber(res);
+    });
     // Subscribe to new notifications
     const subscription = supabase
       .channel("notifications")
@@ -542,24 +562,29 @@ export default function Dashboard() {
 
   const markAllAsRead = () => {
     // Mark all notifications as read in database
-    if (!user) return;
+    try {
+      if (!user) return;
 
-    const updateNotifications = async () => {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("user_id", user.id);
+      const updateNotifications = async () => {
+        const { data, error } = await supabase
+          .from("notifications")
+          .update({ read: true })
+          .eq("user_id", user.id);
+        console.log("data ", data);
+        console.log("error ", error);
+        if (error) {
+          console.error("Error marking notifications as read:", error);
+          return;
+        }
+        setNotifNumber(0);
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        setHasNewNotification(false);
+      };
 
-      if (error) {
-        console.error("Error marking notifications as read:", error);
-        return;
-      }
-
-      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-      setHasNewNotification(false);
-    };
-
-    updateNotifications();
+      updateNotifications();
+    } catch (error) {
+      console.log("Error", error);
+    }
   };
 
   // Close dropdowns when clicking outside
@@ -982,6 +1007,7 @@ export default function Dashboard() {
                     <Bell
                       onClick={() => {
                         setShowNotifications((prev) => !prev);
+                        markAllAsRead();
                         setShowSettings(false); // Close settings when opening notifications
                       }}
                       className={`h-6 w-6 transition-all duration-300 ${
@@ -990,6 +1016,14 @@ export default function Dashboard() {
                           : "text-slate-400"
                       }`}
                     />
+
+                    {/* Notification Badge */}
+                    {notifNumber > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] flex justify-center items-center">
+                        {notifNumber > 9 ? "9+" : notifNumber}
+                      </span>
+                    )}
+
                     {/* Notifications Dropdown with Apple-style Animation */}
                     {showNotifications &&
                       createPortal(
@@ -1007,10 +1041,7 @@ export default function Dashboard() {
                               Notifications
                             </h3>
                             <div className="flex gap-2">
-                              <button
-                                onClick={markAllAsRead}
-                                className="text-xs text-slate-400 hover:text-white transition-colors"
-                              >
+                              <button className="text-xs text-slate-400 hover:text-white transition-colors">
                                 Mark all as read
                               </button>
                               <button
@@ -1050,6 +1081,7 @@ export default function Dashboard() {
                         </div>,
                         document.body
                       )}
+
                     {/* Add this CSS to your global styles or component */}
                     <style jsx>{`
                       @keyframes slide-in-right {
