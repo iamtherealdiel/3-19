@@ -769,7 +769,10 @@ export default function Dashboard() {
     );
   }
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-slate-900 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-slate-500/5 pointer-events-none"></div>
+      <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/10 rounded-full filter blur-3xl pointer-events-none"></div>
+      <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full filter blur-3xl pointer-events-none"></div>
       {/* Onboarding Popup */}
       {isVisible && notification && (
         <div className="fixed top-2 left-0 right-0 mx-auto w-80 z-50 animate-slide-in">
@@ -971,9 +974,6 @@ export default function Dashboard() {
         <main className="flex-1">
           <div className="py-6">
             {/* Background gradient effects */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-slate-500/5 pointer-events-none"></div>
-            <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/10 rounded-full filter blur-3xl pointer-events-none"></div>
-            <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full filter blur-3xl pointer-events-none"></div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 space-y-8">
               <div className="flex items-center justify-between">
