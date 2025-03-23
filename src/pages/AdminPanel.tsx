@@ -151,7 +151,7 @@ export default function AdminPanel() {
     reason?: string
   ) => {
     try {
-      if (activeTab == "applciations") {
+      if (activeTab == "applications") {
         const {
           data,
           error,
@@ -163,7 +163,7 @@ export default function AdminPanel() {
           new_status: status, // Third parameter
           reason: status === "rejected" ? reason : `Application ${status}`, // Fourth parameter
         });
-
+        console.log("im here");
         if (error) throw error;
         console.log(data, reqStats, count);
         toast.success(`Application ${status} successfully`);
@@ -434,12 +434,12 @@ export default function AdminPanel() {
                               {app.status === "pending" && (
                                 <>
                                   <button
-                                    onClick={() =>
+                                    onClick={() => {
                                       handleApplicationStatus(
                                         app.id,
                                         "approved"
-                                      )
-                                    }
+                                      );
+                                    }}
                                     className="px-4 py-2 bg-green-600/90 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center shadow-lg shadow-green-500/10 hover:shadow-green-500/20"
                                   >
                                     <UserCheck className="h-4 w-4 mr-1" />
