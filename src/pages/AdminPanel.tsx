@@ -20,6 +20,7 @@ import {
   Bell,
   YoutubeIcon,
   LucideYoutube,
+  User2,
 } from "lucide-react";
 import {
   lookupUserBySecureId,
@@ -29,6 +30,7 @@ import {
 import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import UsersPanel from "./features/usersPanel";
 export const adminId = "26c83260-54f6-4dd4-bc65-d21e7e52632b";
 type UserLookupData = {
   id: string;
@@ -372,6 +374,19 @@ export default function AdminPanel() {
                 <MessageSquare className="h-4 w-4 mr-1" />
                 Messages
               </Link>
+              <button
+                onClick={() => setActiveTab("users")}
+                className={`py-2 px-4 md:py-3 md:px-6 font-medium text-sm flex items-center transition-colors relative ${
+                  activeTab === "users"
+                    ? "text-indigo-400 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-gradient-to-r after:from-indigo-500 after:to-purple-500"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <div className="flex items-center">
+                  <User2 />
+                  Users
+                </div>
+              </button>
             </div>
 
             {/* Applications tab */}
@@ -942,6 +957,7 @@ export default function AdminPanel() {
                 )}
               </div>
             )}
+            {activeTab == "users" && <UsersPanel />}
           </div>
         </div>
       </div>
