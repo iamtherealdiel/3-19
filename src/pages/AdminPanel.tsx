@@ -366,7 +366,7 @@ export default function AdminPanel() {
                 </div>
               </button>
               <Link
-                to="/youtube-channels"
+                to="/messages"
                 className="py-2 px-4 md:py-3 md:px-6 font-medium text-sm flex items-center transition-colors text-slate-400 hover:text-white"
               >
                 <MessageSquare className="h-4 w-4 mr-1" />

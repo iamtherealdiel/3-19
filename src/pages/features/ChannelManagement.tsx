@@ -18,7 +18,6 @@ import {
   Clock,
   XCircle,
 } from "lucide-react";
-import OnboardingPopup from "../../components/OnboardingPopup";
 import NewChannelPopup from "../../components/AddNewChannel";
 
 interface Channel {
@@ -38,98 +37,94 @@ export default function ChannelManagement() {
   const [error, setError] = useState<string | null>(null);
   const [showAddChannelModal, setShowAddChannelModal] = useState(false);
   const [newChannelUrl, setNewChannelUrl] = useState("");
+  const fetchChannels = async () => {
+    try {
+      // Get user's linked channels
+      const { data: requestData, error: requestError } = await supabase
+        .from("user_requests")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
 
+      console.log("requestData from user_requests:", requestData);
+      if (requestError) throw requestError;
+
+      // Then get additional channels from channels table
+      const { data: channelsData, error: channelsError } = await supabase
+        .from("channels")
+        .select("*")
+        .eq("user_id", user.id);
+
+      console.log("channelsData from channels:", channelsData);
+      if (channelsError) throw channelsError;
+
+      if (
+        !requestData?.youtube_links?.length &&
+        (!channelsData || channelsData.length === 0)
+      ) {
+        setError("No channels linked to your account");
+      }
+
+      if (!requestData[0]?.user_requests.youtube_links?.length) {
+        setError("No channels linked to your account");
+      }
+
+      // Get views data for each channel
+      const { data: viewsData, error: viewsError } = await supabase
+        .from("channel_views")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("month", { ascending: false });
+
+      if (viewsError) throw viewsError;
+
+      // Transform data
+      let mainChannel = (requestData.youtube_links || []).map((url: string) => {
+        console.log("url from main channel ", requestData?.youtube_links);
+        const channelViews =
+          viewsData?.filter((v) => v.channel_id === url) || [];
+        const currentMonthViews = channelViews[0]?.views || 0;
+        const lastMonthViews = channelViews[1]?.views || 0;
+        const growth = lastMonthViews
+          ? ((currentMonthViews - lastMonthViews) / lastMonthViews) * 100
+          : 0;
+        return {
+          url,
+          views: channelViews.reduce((sum, v) => sum + v.views, 0),
+          monthlyViews: currentMonthViews,
+          subscribers: Math.floor(Math.random() * 1000000), // Mock data
+          growth,
+          status: "approved",
+        };
+      });
+      let otherChannels = (channelsData || []).map((data: any) => {
+        const url = data?.link;
+        const channelViews =
+          viewsData?.filter((v) => v.channel_id === url) || [];
+        const currentMonthViews = channelViews[0]?.views || 0;
+        const lastMonthViews = channelViews[1]?.views || 0;
+        const growth = lastMonthViews
+          ? ((currentMonthViews - lastMonthViews) / lastMonthViews) * 100
+          : 0;
+        return {
+          url,
+          views: channelViews.reduce((sum, v) => sum + v.views, 0),
+          monthlyViews: currentMonthViews,
+          subscribers: Math.floor(Math.random() * 1000000), // Mock data
+          growth,
+          status: data.status,
+        };
+      });
+      setChannels([...mainChannel, ...otherChannels]);
+    } catch (error) {
+      console.error("Error fetching channels:", error);
+      setError("Failed to load channel data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
   useEffect(() => {
     if (!user) return;
-
-    const fetchChannels = async () => {
-      try {
-        // Get user's linked channels
-        const { data: requestData, error: requestError } = await supabase
-          .from("user_requests")
-          .select("*")
-          .eq("user_id", user.id)
-          .single();
-
-        console.log("requestData from user_requests:", requestData);
-        if (requestError) throw requestError;
-
-        // Then get additional channels from channels table
-        const { data: channelsData, error: channelsError } = await supabase
-          .from("channels")
-          .select("*")
-          .eq("user_id", user.id);
-
-        console.log("channelsData from channels:", channelsData);
-        if (channelsError) throw channelsError;
-
-        if (
-          !requestData?.youtube_links?.length &&
-          (!channelsData || channelsData.length === 0)
-        ) {
-          setError("No channels linked to your account");
-        }
-
-        if (!requestData[0]?.user_requests.youtube_links?.length) {
-          setError("No channels linked to your account");
-        }
-
-        // Get views data for each channel
-        const { data: viewsData, error: viewsError } = await supabase
-          .from("channel_views")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("month", { ascending: false });
-
-        if (viewsError) throw viewsError;
-
-        // Transform data
-        let mainChannel = (requestData.youtube_links || []).map(
-          (url: string) => {
-            console.log("url from main channel ", requestData?.youtube_links);
-            const channelViews =
-              viewsData?.filter((v) => v.channel_id === url) || [];
-            const currentMonthViews = channelViews[0]?.views || 0;
-            const lastMonthViews = channelViews[1]?.views || 0;
-            const growth = lastMonthViews
-              ? ((currentMonthViews - lastMonthViews) / lastMonthViews) * 100
-              : 0;
-            return {
-              url,
-              views: channelViews.reduce((sum, v) => sum + v.views, 0),
-              monthlyViews: currentMonthViews,
-              subscribers: Math.floor(Math.random() * 1000000), // Mock data
-              growth,
-              status: "approved",
-            };
-          }
-        );
-        let otherChannels = (channelsData || []).map((data: any) => {
-          const url = data?.link;
-          const channelViews =
-            viewsData?.filter((v) => v.channel_id === url) || [];
-          const currentMonthViews = channelViews[0]?.views || 0;
-          const lastMonthViews = channelViews[1]?.views || 0;
-          const growth = lastMonthViews
-            ? ((currentMonthViews - lastMonthViews) / lastMonthViews) * 100
-            : 0;
-          return {
-            url,
-            views: channelViews.reduce((sum, v) => sum + v.views, 0),
-            monthlyViews: currentMonthViews,
-            subscribers: Math.floor(Math.random() * 1000000), // Mock data
-            growth,
-            status: data.status,
-          };
-        });
-        setChannels([...mainChannel, ...otherChannels]);
-      } catch (error) {
-        console.error("Error fetching channels:", error);
-        setError("Failed to load channel data");
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
     fetchChannels();
   }, [user]);
@@ -163,7 +158,7 @@ export default function ChannelManagement() {
       // Reset and reload
       setNewChannelUrl("");
       setShowAddChannelModal(false);
-      window.location.reload();
+      fetchChannels();
     } catch (error) {
       console.error("Error adding channel:", error);
       setError("Failed to add channel");
@@ -187,6 +182,7 @@ export default function ChannelManagement() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
         {showAddChannelModal && (
           <NewChannelPopup
+            loadChannels={fetchChannels}
             type="main"
             isOpen={showAddChannelModal}
             onClose={() => {
@@ -207,7 +203,9 @@ export default function ChannelManagement() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                fetchChannels();
+              }}
               className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors inline-flex items-center justify-center"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -241,7 +239,7 @@ export default function ChannelManagement() {
                   className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
                   onClick={() => {
                     setIsLoading(true);
-                    window.location.reload();
+                    fetchChannels();
                   }}
                 >
                   <RefreshCw className="h-5 w-5" />

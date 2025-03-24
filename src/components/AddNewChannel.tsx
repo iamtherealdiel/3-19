@@ -10,6 +10,7 @@ interface NewChannelPopupProps {
   onClose: () => void;
   userId: string;
   userEmail: string;
+  loadChannels: any;
   type?: "channel" | "main";
 }
 
@@ -19,6 +20,7 @@ export default function NewChannelPopup({
   userId,
   type = "channel",
   userEmail,
+  loadChannels,
 }: NewChannelPopupProps) {
   const [channelInfo, setChannelInfo] = useState({
     youtubeLinks: [""],
@@ -58,7 +60,20 @@ export default function NewChannelPopup({
           .eq("link", channelUrl)
           .eq("status", "approved")
           .single();
-
+      const { data: alreadySubmitted, error: erroralreadySubmitted } =
+        await supabase
+          .from("channels")
+          .select("id")
+          .eq("link", channelUrl)
+          .eq("status", "pending")
+          .eq("user_id", userId)
+          .single();
+      if (alreadySubmitted) {
+        toast.error(
+          "This YouTube channel is already pending review. Please wait for approval."
+        );
+        return;
+      }
       if (existingRequest || existsInChannelsRequest) {
         toast.error("This YouTube channel is already registered.");
         setChannelInfo((prev) => ({
@@ -176,7 +191,7 @@ export default function NewChannelPopup({
             })
             .eq("user_id", userId);
         } else {
-          const { error } = await supabase.from("user_requests").insert([
+          const { data, error } = await supabase.from("user_requests").insert([
             {
               user_id: userId,
               interests: ["channelManagement"],
@@ -200,6 +215,7 @@ export default function NewChannelPopup({
       toast.error(error.message || "Failed to add channel");
     } finally {
       setIsSubmitting(false);
+      loadChannels;
     }
   };
 

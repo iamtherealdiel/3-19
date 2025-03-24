@@ -53,6 +53,7 @@ import {
 } from "chart.js";
 import ChannelManagement from "./features/ChannelManagement";
 import BalanceSection from "./features/BalanceComponent";
+import UsernameSetupModal from "../components/UsernameSetupModal";
 
 // Register ChartJS components
 ChartJS.register(
@@ -107,8 +108,6 @@ export default function Dashboard() {
   const [monthlyViews, setMonthlyViews] = useState(0);
   const [linkedChannels, setLinkedChannels] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [channels, setChannels] = useState<Channel[]>([]);
   const [reason, setReason] = useState("");
   const [isRejected, setIsRejected] = useState(false);
   const [hasChanel, setHasChanel] = useState(false);
@@ -121,6 +120,12 @@ export default function Dashboard() {
   const [notifNumber, setNotifNumber] = useState<any>(0);
   const [profileImage, setProfileImage] = useState<string | null>(
     user?.user_metadata?.avatar_url || null
+  );
+  const [username, setUsername] = useState(
+    user?.user_metadata?.username || null
+  );
+  const [showUsernameModal, setShowUsernameModal] = useState(
+    username == "" || username == null
   );
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [goals, setGoals] = useState<GoalProgress[]>([]);
@@ -770,6 +775,13 @@ export default function Dashboard() {
   }
   return (
     <div className="min-h-screen bg-slate-900 relative overflow-hidden">
+      <UsernameSetupModal
+        setDashboardUsername={setUsername}
+        isOpen={showUsernameModal}
+        onClose={() => {
+          setShowUsernameModal(false);
+        }}
+      />
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-slate-500/5 pointer-events-none"></div>
       <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/10 rounded-full filter blur-3xl pointer-events-none"></div>
       <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full filter blur-3xl pointer-events-none"></div>
@@ -849,6 +861,9 @@ export default function Dashboard() {
                 Welcome,{" "}
                 {user?.user_metadata?.full_name?.split(" ")[0] || "User"}!
               </h2>
+              <p className="text-sm text-slate-400 mb-4">
+                {username && <span>@{username}</span>}
+              </p>
             </div>
 
             <nav className="mt-5 flex-1 space-y-2 px-4">

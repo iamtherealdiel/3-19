@@ -15,7 +15,7 @@ const BalanceSection = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
   const { user } = useAuth();
-
+  const [loading, setLoading] = useState(true);
   const clearSignature = () => {
     setSignatureImage("");
     if (signaturePadRef.current) {
@@ -36,6 +36,7 @@ const BalanceSection = () => {
 
   const getContractDetails = async () => {
     try {
+      setLoading(true);
       const { data: contractData, error: contractError } = await supabase
         .from("contract")
         .select("*")
@@ -56,6 +57,8 @@ const BalanceSection = () => {
     } catch (error) {
       console.error("Unexpected error:", error);
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -259,6 +262,16 @@ const BalanceSection = () => {
     });
   }, []);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
+          <p className="text-slate-300">Loading... </p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-gray-900 flex">
       {/* Main content */}
