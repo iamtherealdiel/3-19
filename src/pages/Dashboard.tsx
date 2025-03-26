@@ -54,6 +54,7 @@ import {
 import ChannelManagement from "./features/ChannelManagement";
 import BalanceSection from "./features/BalanceComponent";
 import UsernameSetupModal from "../components/UsernameSetupModal";
+import MonthlyGoals from "./features/GoalsComponent";
 
 // Register ChartJS components
 ChartJS.register(
@@ -1340,41 +1341,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Goals Section */}
-                  <div className="col-span-full md:col-span-2 bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
-                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                      <Target className="h-5 w-5 text-indigo-400 mr-2" />
-                      Monthly Goals
-                    </h3>
-                    <div className="space-y-6">
-                      {goals.map((goal) => {
-                        const percentage = Math.round(
-                          (goal.current / goal.target) * 100
-                        );
-                        return (
-                          <div key={goal.id} className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-slate-300">
-                                {goal.title}
-                              </span>
-                              <span className="text-slate-400">
-                                {formatNumber(goal.current)} /{" "}
-                                {formatNumber(goal.target)} {goal.unit}
-                              </span>
-                            </div>
-                            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full bg-${goal.color}-500 rounded-full transition-all duration-500`}
-                                style={{ width: `${percentage}%` }}
-                              ></div>
-                            </div>
-                            <div className="text-sm text-slate-400 text-right">
-                              {percentage}% Complete
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <MonthlyGoals user={user} />
 
                   {/* Activity Feed */}
                   <div className="col-span-full md:col-span-2 bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
