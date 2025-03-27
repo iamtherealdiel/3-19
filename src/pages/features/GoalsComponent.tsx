@@ -136,7 +136,17 @@ export default function MonthlyGoals({ user }: MonthlyGoalsProps) {
             dataObject.find((item: any) => item.name === goal.id)?.value ??
             goal.current,
         }));
-
+        setTargetValues({
+          monthlyViews:
+            targetObject.find((item: any) => item.name === "monthly-views")
+              ?.value ?? predefinedGoals[0].target,
+          subscriberGrowth:
+            targetObject.find((item: any) => item.name === "subscriber-growth")
+              ?.value ?? predefinedGoals[1].target,
+          revenueTarget:
+            targetObject.find((item: any) => item.name === "revenue-target")
+              ?.value ?? predefinedGoals[2].target,
+        });
         setGoals(updatedGoals);
         setGoalsSetup(true);
       } else {
@@ -268,19 +278,6 @@ export default function MonthlyGoals({ user }: MonthlyGoalsProps) {
     };
   }, [isModalOpen]);
 
-  // Prevent scrolling when modal is open
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isModalOpen]);
-
   const { monthName } = getCurrentMonth();
 
   // Loading state
@@ -380,7 +377,12 @@ export default function MonthlyGoals({ user }: MonthlyGoalsProps) {
               </h3>
               <button
                 onClick={() => {
-                  if (!goalsSetup) setIsModalOpen(false);
+                  if (goalsSetup) {
+                    setIsModalOpen(false);
+                  } else {
+                    setIsModalOpen(false);
+                    setGoalsSetup(false);
+                  }
                 }}
                 className="text-slate-400 hover:text-white transition-colors"
                 aria-label="Close"
@@ -401,6 +403,7 @@ export default function MonthlyGoals({ user }: MonthlyGoalsProps) {
                   type="number"
                   value={targetValues.monthlyViews}
                   onChange={handleInputChange}
+                  min={0}
                   className="bg-slate-700 border border-slate-600 rounded-md px-3 py-1.5 text-white w-32 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -419,6 +422,7 @@ export default function MonthlyGoals({ user }: MonthlyGoalsProps) {
                   type="number"
                   value={targetValues.subscriberGrowth}
                   onChange={handleInputChange}
+                  min={0}
                   className="bg-slate-700 border border-slate-600 rounded-md px-3 py-1.5 text-white w-32 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
@@ -435,6 +439,7 @@ export default function MonthlyGoals({ user }: MonthlyGoalsProps) {
                   id="revenueTarget"
                   name="revenueTarget"
                   type="number"
+                  min={0}
                   value={targetValues.revenueTarget}
                   onChange={handleInputChange}
                   className="bg-slate-700 border border-slate-600 rounded-md px-3 py-1.5 text-white w-32 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -445,8 +450,11 @@ export default function MonthlyGoals({ user }: MonthlyGoalsProps) {
             <div className="flex justify-end gap-2 p-4 border-t border-slate-700">
               <button
                 onClick={() => {
-                  if (!goalsSetup) {
+                  if (goalsSetup) {
                     setIsModalOpen(false);
+                  } else {
+                    setIsModalOpen(false);
+                    setGoalsSetup(false);
                   }
                 }}
                 className="px-4 py-2 rounded-md border border-slate-600 text-slate-300 hover:bg-slate-700 transition-colors"
