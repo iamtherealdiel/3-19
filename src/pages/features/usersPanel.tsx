@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import { useAuth } from "../../contexts/AuthContext";
 
 const UsersPanel: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -8,16 +7,36 @@ const UsersPanel: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Frontend pagination
+  // Updated to use filteredUsers for pagination
+  const filteredUsers = React.useMemo(() => {
+    return users.filter((user) =>
+      Object.values({
+        username: user?.raw_user_meta_data?.username || "",
+        email: user?.email || "",
+        fullName: user?.raw_user_meta_data?.full_name || "",
+      })
+        .join(" ")
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
+    );
+  }, [users, searchQuery]);
+
+  // Frontend pagination on filtered users
   const paginatedUsers = React.useMemo(() => {
     const startIndex = page * rowsPerPage;
-    return users.slice(startIndex, startIndex + rowsPerPage);
-  }, [users, page, rowsPerPage]);
+    return filteredUsers.slice(startIndex, startIndex + rowsPerPage);
+  }, [filteredUsers, page, rowsPerPage]);
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Reset page when search query changes
+  useEffect(() => {
+    setPage(0);
+  }, [searchQuery]);
 
   const fetchUsers = async () => {
     try {
@@ -35,12 +54,53 @@ const UsersPanel: React.FC = () => {
     }
   };
 
-  // Calculate total pages
-  const totalPages = Math.ceil(users.length / rowsPerPage);
+  // Calculate total pages based on filtered users
+  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
 
   return (
     <>
       <div className="w-full bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-slate-700/50">
+        <div className="mb-4">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+              }}
+              placeholder="Search users..."
+              className="w-full px-4 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <p className="text-sm text-slate-400 mt-2">
+              {filteredUsers.length} result
+              {filteredUsers.length !== 1 ? "s" : ""} found
+            </p>
+          )}
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-700/50">
             <thead className="bg-slate-800">
@@ -67,6 +127,15 @@ const UsersPanel: React.FC = () => {
                     className="px-6 py-4 text-center text-slate-300"
                   >
                     Loading...
+                  </td>
+                </tr>
+              ) : filteredUsers.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="px-6 py-4 text-center text-slate-300"
+                  >
+                    No users found
                   </td>
                 </tr>
               ) : (
@@ -147,9 +216,10 @@ const UsersPanel: React.FC = () => {
                 Showing{" "}
                 <span className="font-medium">{page * rowsPerPage + 1}</span> -{" "}
                 <span className="font-medium">
-                  {Math.min((page + 1) * rowsPerPage, users.length)}
+                  {Math.min((page + 1) * rowsPerPage, filteredUsers.length)}
                 </span>{" "}
-                of <span className="font-medium">{users.length}</span> results
+                of <span className="font-medium">{filteredUsers.length}</span>{" "}
+                results
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -190,10 +260,17 @@ const UsersPanel: React.FC = () => {
       </div>
       {selectedUser && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-auto p-4 bg-black/80 backdrop-blur-sm"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            overscrollBehavior: "contain",
+          }}
         >
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto p-4">
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="bg-slate-800/95 rounded-xl p-8 shadow-2xl border border-slate-700 relative">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-semibold text-slate-200">
@@ -339,6 +416,26 @@ const UsersPanel: React.FC = () => {
                         <span className="text-slate-400">Provider:</span>{" "}
                         {selectedUser.raw_app_meta_data?.provider}
                       </p>
+                      <div className="flex items-center justify-between mt-4">
+                        <span className="text-sm text-slate-300">
+                          Block User
+                        </span>
+                        <button
+                          className={`px-4 py-2 rounded-md text-sm font-medium ${
+                            selectedUser.raw_user_meta_data?.blocked
+                              ? "bg-red-500/20 text-red-300 hover:bg-red-500/30"
+                              : "bg-slate-600/50 text-slate-300 hover:bg-slate-600"
+                          }`}
+                          onClick={() => {
+                            // Add your block user logic here
+                            console.log("Block user clicked");
+                          }}
+                        >
+                          {selectedUser.raw_user_meta_data?.blocked
+                            ? "Unblock"
+                            : "Block"}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

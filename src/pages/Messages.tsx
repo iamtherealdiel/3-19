@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { ArrowLeft, MessageSquare, Search } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
-import MessagePanel from "../components/MessagePanel";
 import { adminId } from "./AdminPanel";
-import { X } from "lucide-react"; // Add X icon for close button
+import { X } from "lucide-react";
 
 interface AdminUser {
   id: string;
@@ -24,14 +23,12 @@ export default function Messages() {
   const [newMessage, setNewMessage] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  // Simplified messages fetching - only get messages between user and admin
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Add this function after state declarations
-
-  // Add this effect to scroll when messages update
-
-  // Simplified admin user fetching - only get the admin user
+  // Add new state for users, selected user, and search
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const fetchUsers = async () => {
     if (!user || !isAdmin) return;
@@ -48,8 +45,7 @@ export default function Messages() {
         .from("profiles")
         .select("*");
       if (usersError) throw usersError;
-      console.log("allUsers ", allUsers);
-      // Filter out admin users and organize messages by user
+
       const messageUserIds = [
         ...new Set(messages?.flatMap((m) => [m.sender_id, m.receiver_id])),
       ];
@@ -70,7 +66,6 @@ export default function Messages() {
         };
       });
 
-      // Sort users by last message time
       const sortedUsers = usersWithMessages.sort(
         (a, b) =>
           new Date(b.last_message_time).getTime() -
@@ -104,25 +99,19 @@ export default function Messages() {
 
   if (!user) return null;
 
-  // Remove duplicate fetchMessages function and useEffect
   const isAdmin = user.user_metadata.role === "admin";
 
-  // Add file state
-
-  // Add file upload handler
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
     }
   };
 
-  // Modify handleSendMessage to handle file uploads
   const handleSendMessage = async () => {
     if (!user) return;
 
     try {
       let fileUrl = "";
-      let recieverid = "";
       if (selectedFile) {
         const fileExt = selectedFile.name.split(".").pop();
         const fileName = `${Math.random()}.${fileExt}`;
@@ -159,6 +148,7 @@ export default function Messages() {
       console.error("Error sending message:", error);
     }
   };
+
   const ImagePreview = () => {
     if (!previewImage) return null;
     return (
@@ -179,8 +169,7 @@ export default function Messages() {
       </div>
     );
   };
-  // Modify renderMessage to display files
-  // Update the renderMessage function to match the new style
+
   const renderMessage = (message: any) => {
     const isCurrentUser = message.sender_id === user?.id;
     return (
@@ -222,12 +211,7 @@ export default function Messages() {
       </div>
     );
   };
-  // Add new interfaces at the top
-  // Add new state for users and selected user
-  const [users, setUsers] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
-  // Add new function to fetch all users and their last messages
   const fetchMessages = async () => {
     if (!user) return;
 
@@ -248,10 +232,10 @@ export default function Messages() {
       console.error("Error fetching messages:", error);
     }
   };
+
   useEffect(() => {
     fetchMessages();
 
-    // Set up real-time subscription for new messages
     const subscription = supabase
       .channel("messages")
       .on(
@@ -275,6 +259,7 @@ export default function Messages() {
       subscription.unsubscribe();
     };
   }, [user, selectedUser]);
+
   useEffect(() => {
     if (messages.length > 0) {
       const messageContainer = document.querySelector(".messages-container");
@@ -285,8 +270,16 @@ export default function Messages() {
       }
     }
   }, [messages]);
-  // Modify the admin return statement to include the user list
+
   if (isAdmin) {
+    // Filter users based on search term
+    const filteredUsers = users.filter(
+      (u) =>
+        u.id !== adminId &&
+        (u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          u.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
     return (
       <div className="min-h-screen bg-slate-900 p-4 md:p-8">
         <ImagePreview />
@@ -304,37 +297,51 @@ export default function Messages() {
           <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-xl border border-slate-700/50 flex h-[calc(100vh-8rem)]">
             {/* Users List Sidebar */}
             <div className="w-80 border-r border-slate-700/50">
-              <div className="p-4 border-b border-slate-700/50">
-                <h2 className="text-lg font-semibold text-white">Users</h2>
+              <div className="p-4 border-b border-slate-700/50 flex items-center">
+                <h2 className="text-lg font-semibold text-white flex-1">
+                  Users
+                </h2>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search users..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="bg-slate-700 text-white rounded-lg pl-8 pr-2 py-1 text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                </div>
               </div>
               <div className="overflow-y-auto h-[calc(100%-4rem)]">
-                {users.map(
-                  (u) =>
-                    u.id !== adminId && (
-                      <button
-                        key={u.id}
-                        onClick={() => setSelectedUser(u)}
-                        className={`w-full p-4 text-left hover:bg-slate-700/50 transition-colors ${
-                          selectedUser?.id === u.id ? "bg-slate-700/50" : ""
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center mr-3">
-                            <MessageSquare className="h-5 w-5 text-indigo-400" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-medium text-white truncate">
-                              {u.full_name || u.email}
-                            </h3>
-                            {u.last_message && (
-                              <p className="text-xs text-slate-400 truncate mt-1">
-                                {u.last_message}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    )
+                {filteredUsers.map((u) => (
+                  <button
+                    key={u.id}
+                    onClick={() => setSelectedUser(u)}
+                    className={`w-full p-4 text-left hover:bg-slate-700/50 transition-colors ${
+                      selectedUser?.id === u.id ? "bg-slate-700/50" : ""
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center mr-3">
+                        <MessageSquare className="h-5 w-5 text-indigo-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-medium text-white truncate">
+                          {u.full_name || u.email}
+                        </h3>
+                        {u.last_message && (
+                          <p className="text-xs text-slate-400 truncate mt-1">
+                            {u.last_message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                {filteredUsers.length === 0 && (
+                  <div className="text-center py-4 text-slate-400 text-sm">
+                    No users found
+                  </div>
                 )}
               </div>
             </div>
@@ -441,6 +448,7 @@ export default function Messages() {
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-slate-900 p-4 md:p-8">
       <ImagePreview />
@@ -549,6 +557,4 @@ export default function Messages() {
       </div>
     </div>
   );
-  // In the render section, add a debug log
-  console.log("Current messages state:", messages); // Debug log
 }
