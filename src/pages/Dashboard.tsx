@@ -55,6 +55,7 @@ import ChannelManagement from "./features/ChannelManagement";
 import BalanceSection from "./features/BalanceComponent";
 import UsernameSetupModal from "../components/UsernameSetupModal";
 import MonthlyGoals from "./features/GoalsComponent";
+import BannedComponent from "./features/BannedComponent";
 
 // Register ChartJS components
 ChartJS.register(
@@ -119,6 +120,7 @@ export default function Dashboard() {
   const [notificationType, setNotificationType] = useState("info");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [notifNumber, setNotifNumber] = useState<any>(0);
+  const [isBanned, setIsBanned] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(
     user?.user_metadata?.avatar_url || null
   );
@@ -455,8 +457,9 @@ export default function Dashboard() {
     getNotifNumber().then((res) => {
       setNotifNumber(res);
     });
-    // Subscribe to new notifications
-    const subscription = supabase
+
+    // Subscribe to notifications
+    const notificationSubscription = supabase
       .channel("notifications")
       .on(
         "postgres_changes",
@@ -465,8 +468,46 @@ export default function Dashboard() {
       )
       .subscribe();
 
+    // Subscribe to ban status changes
+    const banSubscription = supabase
+      .channel("ban")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ban" },
+        async (payload) => {
+          console.log("Ban change received!", payload);
+          if (payload.eventType == "INSERT") {
+            if (payload.new.user_id == user?.id) {
+              setIsBanned(true);
+            }
+          } else if (payload.eventType === "DELETE") {
+            const deletedBanId = payload.old.id;
+
+            // Query the ban table to get the user_id associated with the deleted ban
+
+            const { data, error } = await supabase
+              .from("ban")
+              .select("*")
+              .eq("user_id", user?.id);
+
+            if (error) {
+              console.error("Error fetching user_id for deleted ban:", error);
+              return;
+            }
+
+            if (data.length == 0) {
+              setIsBanned(false); // Update state to reflect the unban
+            }
+          }
+        }
+      )
+
+      .subscribe();
+
+    // Cleanup subscriptions
     return () => {
-      subscription.unsubscribe();
+      notificationSubscription.unsubscribe();
+      banSubscription.unsubscribe();
     };
   }, [user]);
 
@@ -629,12 +670,30 @@ export default function Dashboard() {
 
       return requestData;
     };
+    const checkUserIfBanned = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from("ban")
+          .select("user_id")
+          .eq("user_id", user?.id);
 
+        if (error) {
+          console.error("Error fetching ban list:", error);
+          return;
+        }
+
+        setIsBanned(data.length !== 0);
+      } catch (error) {
+        console.error("Error in getBanList:", error);
+      }
+    };
     if (user?.user_metadata?.role === "admin") {
       navigate("/purple");
       setIsLoading(false);
       return;
     } else if (user) {
+      checkUserIfBanned();
       fecthUserRequest(user?.id)
         .then((res) => {
           console.log(res);
@@ -674,8 +733,10 @@ export default function Dashboard() {
             setIsRejected(true);
             setIsLoading(false);
           }
+
           setIsLoading(false);
         })
+
         .catch((err) => {
           console.log(err);
         });
@@ -738,6 +799,7 @@ export default function Dashboard() {
       </div>
     );
   }
+
   if (isRejected) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
@@ -773,6 +835,10 @@ export default function Dashboard() {
         </div>
       </div>
     );
+  }
+
+  if (isBanned && !isLoading) {
+    return <BannedComponent handleSignOut={signOut} />;
   }
   return (
     <div className="min-h-screen bg-slate-900 relative overflow-hidden">

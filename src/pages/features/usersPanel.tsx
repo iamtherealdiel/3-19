@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+import { BanIcon } from "lucide-react";
 
 const UsersPanel: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -8,7 +9,7 @@ const UsersPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-
+  const [banList, setBanList] = useState<string[]>([]);
   // Updated to use filteredUsers for pagination
   const filteredUsers = React.useMemo(() => {
     return users.filter((user) =>
@@ -22,7 +23,25 @@ const UsersPanel: React.FC = () => {
         .includes(searchQuery.toLowerCase())
     );
   }, [users, searchQuery]);
+  const getBanList = async () => {
+    try {
+      const { data, error } = await supabase.from("ban").select("user_id");
 
+      if (error) {
+        console.error("Error fetching ban list:", error);
+        return;
+      }
+
+      // Extract user_ids from ban list data
+      const bannedUserIds = data?.map((ban) => ban.user_id) || [];
+      setBanList(bannedUserIds);
+    } catch (error) {
+      console.error("Error in getBanList:", error);
+    }
+  };
+  useEffect(() => {
+    getBanList();
+  }, []);
   // Frontend pagination on filtered users
   const paginatedUsers = React.useMemo(() => {
     const startIndex = page * rowsPerPage;
@@ -57,6 +76,52 @@ const UsersPanel: React.FC = () => {
   // Calculate total pages based on filtered users
   const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
 
+  async function setBlockedRequest(selectedUser: any) {
+    console.log("🚀 ~ setBlockedRequest ~ selectedUser:", selectedUser);
+
+    try {
+      // Update user in the frontend state
+
+      // Check if user is already blocked
+      const { data: existingBan } = await supabase
+        .from("ban")
+        .select("*")
+        .eq("user_id", selectedUser.user_id)
+        .single();
+
+      if (existingBan) {
+        // If user is blocked, delete the ban record
+        const { error: deleteError } = await supabase
+          .from("ban")
+          .delete()
+          .eq("user_id", selectedUser.user_id);
+
+        if (deleteError) {
+          console.error("Error removing ban:", deleteError);
+          return;
+        }
+        setBanList(banList.filter((id) => id !== selectedUser.user_id));
+      } else {
+        // If user is not blocked, create a new ban record
+        const { error: insertError } = await supabase
+          .from("ban")
+          .insert({ user_id: selectedUser.user_id });
+
+        if (insertError) {
+          console.error("Error creating ban:", insertError);
+          return;
+        }
+        setBanList([...banList, selectedUser.user_id]);
+      }
+
+      // Refresh the users list to reflect changes
+      await fetchUsers();
+      await getBanList();
+      // Update the selected user with the new data
+    } catch (error) {
+      console.log(error);
+    }
+  }
   return (
     <>
       <div className="w-full bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-slate-700/50">
@@ -166,12 +231,16 @@ const UsersPanel: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          user?.raw_user_meta_data?.email_verified
+                          banList.includes(user.user_id)
+                            ? "bg-red-900/50 text-red-200"
+                            : user?.raw_user_meta_data?.email_verified
                             ? "bg-emerald-900/50 text-emerald-200"
                             : "bg-slate-800/50 text-slate-300"
                         }`}
                       >
-                        {user?.raw_user_meta_data?.email_verified
+                        {banList.includes(user.user_id)
+                          ? "Banned"
+                          : user?.raw_user_meta_data?.email_verified
                           ? "Active"
                           : "Pending"}
                       </span>
@@ -421,19 +490,21 @@ const UsersPanel: React.FC = () => {
                           Block User
                         </span>
                         <button
-                          className={`px-4 py-2 rounded-md text-sm font-medium ${
-                            selectedUser.raw_user_meta_data?.blocked
+                          className={`flex items-center gap-2 flew-row px-4 py-2 rounded-md text-sm font-medium ${
+                            banList.includes(selectedUser.user_id)
                               ? "bg-red-500/20 text-red-300 hover:bg-red-500/30"
                               : "bg-slate-600/50 text-slate-300 hover:bg-slate-600"
                           }`}
                           onClick={() => {
                             // Add your block user logic here
+                            setBlockedRequest(selectedUser);
                             console.log("Block user clicked");
                           }}
                         >
-                          {selectedUser.raw_user_meta_data?.blocked
+                          {banList.includes(selectedUser.user_id)
                             ? "Unblock"
                             : "Block"}
+                          <BanIcon size={16} />
                         </button>
                       </div>
                     </div>

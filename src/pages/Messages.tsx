@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft, MessageSquare, Search } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
@@ -29,7 +29,8 @@ export default function Messages() {
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const location = useLocation();
+  const currentPath = location.pathname;
   const fetchUsers = async () => {
     if (!user || !isAdmin) return;
 
@@ -281,19 +282,13 @@ export default function Messages() {
     );
 
     return (
-      <div className="min-h-screen bg-slate-900 p-4 md:p-8">
+      <div
+        className={
+          "bg-slate-700/30 backdrop-blur-sm rounded-xl p-3 md:p-6 mb-6"
+        }
+      >
         <ImagePreview />
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <Link
-              to="/purple"
-              className="inline-flex items-center text-slate-400 hover:text-white"
-            >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Back to Admin Panel
-            </Link>
-          </div>
-
           <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl shadow-xl border border-slate-700/50 flex h-[calc(100vh-8rem)]">
             {/* Users List Sidebar */}
             <div className="w-80 border-r border-slate-700/50">

@@ -31,6 +31,7 @@ import toast from "react-hot-toast";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import UsersPanel from "./features/usersPanel";
+import Messages from "./Messages";
 export const adminId = "26c83260-54f6-4dd4-bc65-d21e7e52632b";
 type UserLookupData = {
   id: string;
@@ -297,8 +298,11 @@ export default function AdminPanel() {
             <Lock className="h-4 w-4" />
           </button>
         </div>
-
-        <div className="bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 md:p-8 shadow-xl border border-slate-700/50 relative overflow-hidden">
+        <div
+          className={`bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 md:p-8 shadow-xl border border-slate-700/50 relative overflow-hidden ${
+            activeTab == "users" ? "min-h-[90vh]" : ""
+          }`}
+        >
           {/* Background gradient effects */}
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-slate-500/5"></div>
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-indigo-500/10 rounded-full filter blur-3xl"></div>
@@ -367,13 +371,17 @@ export default function AdminPanel() {
                   Channels
                 </div>
               </button>
-              <Link
-                to="/messages"
-                className="py-2 px-4 md:py-3 md:px-6 font-medium text-sm flex items-center transition-colors text-slate-400 hover:text-white"
+              <button
+                onClick={() => setActiveTab("messages")}
+                className={`py-2 px-4 md:py-3 md:px-6 font-medium text-sm flex items-center transition-colors relative ${
+                  activeTab === "messages"
+                    ? "text-indigo-400 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-gradient-to-r after:from-indigo-500 after:to-purple-500"
+                    : "text-slate-400 hover:text-white"
+                }`}
               >
                 <MessageSquare className="h-4 w-4 mr-1" />
                 Messages
-              </Link>
+              </button>
               <button
                 onClick={() => setActiveTab("users")}
                 className={`py-2 px-4 md:py-3 md:px-6 font-medium text-sm flex items-center transition-colors relative ${
@@ -958,6 +966,7 @@ export default function AdminPanel() {
               </div>
             )}
             {activeTab == "users" && <UsersPanel />}
+            {activeTab == "messages" && <Messages />}
           </div>
         </div>
       </div>
