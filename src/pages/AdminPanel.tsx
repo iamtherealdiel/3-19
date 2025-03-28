@@ -21,6 +21,7 @@ import {
   YoutubeIcon,
   LucideYoutube,
   User2,
+  FlagIcon,
 } from "lucide-react";
 import {
   lookupUserBySecureId,
@@ -32,6 +33,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import UsersPanel from "./features/usersPanel";
 import Messages from "./Messages";
+import { AnnouncementManager } from "./features/AnnouncementAdmin";
 export const adminId = "26c83260-54f6-4dd4-bc65-d21e7e52632b";
 type UserLookupData = {
   id: string;
@@ -393,6 +395,19 @@ export default function AdminPanel() {
                 <div className="flex items-center">
                   <User2 />
                   Users
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab("announcement")}
+                className={`py-2 px-4 md:py-3 md:px-6 font-medium text-sm flex items-center transition-colors relative ${
+                  activeTab === "announcement"
+                    ? "text-indigo-400 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-gradient-to-r after:from-indigo-500 after:to-purple-500"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <div className="flex items-center">
+                  <FlagIcon />
+                  Announcement
                 </div>
               </button>
             </div>
@@ -967,6 +982,7 @@ export default function AdminPanel() {
             )}
             {activeTab == "users" && <UsersPanel />}
             {activeTab == "messages" && <Messages />}
+            {activeTab == "announcement" && <AnnouncementManager />}
           </div>
         </div>
       </div>

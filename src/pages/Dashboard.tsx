@@ -56,6 +56,7 @@ import BalanceSection from "./features/BalanceComponent";
 import UsernameSetupModal from "../components/UsernameSetupModal";
 import MonthlyGoals from "./features/GoalsComponent";
 import BannedComponent from "./features/BannedComponent";
+import { Announcements } from "./features/Announcement";
 
 // Register ChartJS components
 ChartJS.register(
@@ -1359,7 +1360,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-
+                  <Announcements />
                   {/* Realtime Views Section */}
                   <div className="col-span-full bg-slate-800/90 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50">
                     <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
