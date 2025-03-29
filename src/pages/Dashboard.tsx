@@ -57,6 +57,7 @@ import UsernameSetupModal from "../components/UsernameSetupModal";
 import MonthlyGoals from "./features/GoalsComponent";
 import BannedComponent from "./features/BannedComponent";
 import { Announcements } from "./features/Announcement";
+import Sidebar from "../components/SideBar";
 
 // Register ChartJS components
 ChartJS.register(
@@ -749,6 +750,7 @@ export default function Dashboard() {
       name: "Overview",
       section: "overview",
       icon: <Eye className="h-5 w-5" />,
+      stepNumber: 1,
     },
     {
       name: "Analytics",
@@ -888,159 +890,17 @@ export default function Dashboard() {
       )}
 
       {/* Sidebar for desktop */}
-      <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
-        <div className="flex min-h-0 flex-1 flex-col bg-slate-800">
-          <div className="flex flex-1 flex-col overflow-y-auto pt-5 pb-4">
-            {/* User Profile Summary */}
-            <div className="px-6 py-8 text-center">
-              <div className="relative group">
-                <div className="h-24 w-24 rounded-full bg-indigo-600 mx-auto mb-4 flex items-center justify-center text-white text-3xl font-bold relative overflow-hidden">
-                  {profileImage ? (
-                    <img
-                      src={profileImage}
-                      alt="Profile"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    user?.user_metadata?.full_name?.[0]?.toUpperCase() || (
-                      <UserCircle className="h-16 w-16" />
-                    )
-                  )}
-
-                  {/* Upload overlay */}
-                  <label className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity duration-200">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageUpload}
-                      disabled={uploadingImage}
-                    />
-                    {uploadingImage ? (
-                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent" />
-                    ) : (
-                      <span className="text-white text-sm">Update</span>
-                    )}
-                  </label>
-                </div>
-              </div>
-
-              <h2 className="text-xl font-bold text-white mb-1">
-                Welcome,{" "}
-                {user?.user_metadata?.full_name?.split(" ")[0] || "User"}!
-              </h2>
-              <p className="text-sm text-slate-400 mb-4">
-                {username && <span>@{username}</span>}
-              </p>
-            </div>
-
-            <nav className="mt-5 flex-1 space-y-2 px-4">
-              {navigationItems.map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => setActiveSection(item.section)}
-                  className="group flex items-center px-4 py-3 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-700 hover:text-white transition-all duration-300 relative overflow-hidden hover:shadow-lg hover:shadow-indigo-500/10 hover:scale-[1.02] hover:-translate-y-0.5"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-indigo-500/5 to-indigo-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  <div className="relative z-10 flex items-center">
-                    <span className="transform transition-transform duration-300 group-hover:scale-110">
-                      {item.icon}
-                    </span>
-                    <span className="ml-3 transform transition-transform duration-300 group-hover:translate-x-1">
-                      {item.name}
-                    </span>
-                  </div>
-                  {item.count && (
-                    <span className="relative z-10 ml-auto bg-slate-900 py-0.5 px-2 rounded-full text-xs transform transition-all duration-300 group-hover:bg-indigo-900 group-hover:text-white">
-                      {item.count}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </nav>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      <div className="md:hidden">
-        <div className="fixed inset-0 z-40 flex">
-          <div
-            className={`fixed inset-0 bg-slate-600 bg-opacity-75 transition-opacity ease-in-out duration-300 ${
-              isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-            }`}
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-
-          <div
-            className={`relative flex w-full max-w-xs flex-1 flex-col bg-slate-800 pt-5 pb-4 transform transition ease-in-out duration-300 ${
-              isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
-          >
-            <div className="absolute top-1 right-0 -mr-14 p-1">
-              <button
-                type="button"
-                className={`h-12 w-12 rounded-full flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white ${
-                  isMobileMenuOpen ? "" : "hidden"
-                }`}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                <X className="h-6 w-6 text-white" />
-              </button>
-            </div>
-
-            <div className="flex-shrink-0 flex items-center px-4">
-              <img
-                src="https://dlveiezovfooqbbfzfmo.supabase.co/storage/v1/object/public/Images//mtiger.png"
-                alt="MediaTiger Logo"
-                className="h-8 w-8"
-              />
-              <span className="ml-2 text-xl font-bold text-white">
-                MediaTiger
-              </span>
-            </div>
-
-            {/* Mobile User Profile Summary */}
-            <div className="px-4 py-6 text-center">
-              <div className="h-20 w-20 rounded-full bg-indigo-600 mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">
-                {user?.user_metadata?.full_name?.[0]?.toUpperCase() || (
-                  <UserCircle className="h-12 w-12" />
-                )}
-              </div>
-              <h2 className="text-lg font-bold text-white mb-1">
-                Welcome,{" "}
-                {user?.user_metadata?.full_name?.split(" ")[0] || "User"}!
-              </h2>
-              <p className="text-sm text-slate-400 mb-4">
-                {userStats.accountType}
-              </p>
-            </div>
-
-            <div className="mt-5 flex-1 h-0 overflow-y-auto">
-              <nav className="px-2 space-y-1">
-                {navigationItems.map((item) => (
-                  <button
-                    key={item.name}
-                    onClick={() => {
-                      setActiveSection(item.section);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="group flex items-center px-2 py-2 text-base font-medium rounded-md text-slate-300 hover:bg-slate-700 hover:text-white w-full"
-                  >
-                    {item.icon}
-                    <span className="ml-3">{item.name}</span>
-                    {item.count && (
-                      <span className="ml-auto bg-slate-900 py-0.5 px-2 rounded-full text-xs">
-                        {item.count}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </nav>
-            </div>
-          </div>
-        </div>
-      </div>
+      {!showOnboarding && (
+        <Sidebar
+          user={user}
+          username={username}
+          profileImage={profileImage}
+          uploadingImage={uploadingImage}
+          handleImageUpload={handleImageUpload}
+          navigationItems={navigationItems}
+          setActiveSection={setActiveSection}
+        />
+      )}
 
       {/* Main content */}
       <div className="md:pl-64 flex flex-col flex-1">
