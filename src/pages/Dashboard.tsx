@@ -58,6 +58,7 @@ import MonthlyGoals from "./features/GoalsComponent";
 import BannedComponent from "./features/BannedComponent";
 import { Announcements } from "./features/Announcement";
 import Sidebar from "../components/SideBar";
+import Messages from "./Messages";
 
 // Register ChartJS components
 ChartJS.register(
@@ -123,6 +124,7 @@ export default function Dashboard() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [notifNumber, setNotifNumber] = useState<any>(0);
   const [isBanned, setIsBanned] = useState(false);
+  const [showMessages, setShowMessage] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(
     user?.user_metadata?.avatar_url || null
   );
@@ -132,6 +134,7 @@ export default function Dashboard() {
   const [showUsernameModal, setShowUsernameModal] = useState(
     username == "" || username == null
   );
+  const [showTutorial, setShowTutorial] = useState(false);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [goals, setGoals] = useState<GoalProgress[]>([]);
   const [realtimeViews, setRealtimeViews] = useState({
@@ -743,7 +746,7 @@ export default function Dashboard() {
           console.log(err);
         });
     }
-  }, [user, setShowOnboarding, navigate]);
+  }, [user, setShowOnboarding]);
 
   const navigationItems = [
     {
@@ -845,11 +848,27 @@ export default function Dashboard() {
   }
   return (
     <div className="min-h-screen bg-slate-900 relative overflow-hidden">
+      {showMessages && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+          onClick={(e) => {
+            // Close messages if clicking outside the messages container
+            if (e.target === e.currentTarget) {
+              setShowMessage(false);
+            }
+          }}
+        >
+          <div className="w-full h-full max-w-4xl rounded-lg shadow-xl overflow-auto">
+            <Messages />
+          </div>
+        </div>
+      )}
       <UsernameSetupModal
         setDashboardUsername={setUsername}
         isOpen={showUsernameModal}
         onClose={() => {
           setShowUsernameModal(false);
+          setShowTutorial(true);
         }}
       />
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-slate-500/5 pointer-events-none"></div>
@@ -899,6 +918,7 @@ export default function Dashboard() {
           handleImageUpload={handleImageUpload}
           navigationItems={navigationItems}
           setActiveSection={setActiveSection}
+          showTuto={showTutorial}
         />
       )}
 
@@ -1126,12 +1146,14 @@ export default function Dashboard() {
                       </div>
                     )}
                   </div>
-                  <Link
+                  <button
                     onMouseEnter={() => {
                       setShowNotifications(false);
                       setShowSettings(false);
                     }}
-                    to="/messages"
+                    onClick={() => {
+                      setShowMessage((prev) => !prev);
+                    }}
                     className="p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all duration-200 hover:scale-110"
                   >
                     <MessageSquare
@@ -1141,7 +1163,7 @@ export default function Dashboard() {
                           : "text-slate-400"
                       }`}
                     />
-                  </Link>
+                  </button>
                 </div>
               </div>
 
@@ -1427,6 +1449,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+
               {activeSection == "channels" && <ChannelManagement />}
               {activeSection == "balance" && <BalanceSection />}
               {activeSection !== "overview" &&
