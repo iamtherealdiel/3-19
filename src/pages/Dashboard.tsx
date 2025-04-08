@@ -104,6 +104,7 @@ interface GoalProgress {
 export default function Dashboard() {
   const { user, signOut, showOnboarding, setShowOnboarding } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [globalReach, setGlobalReach] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -303,7 +304,7 @@ export default function Dashboard() {
     });
 
     const fetchStats = async () => {
-      if (!hasChanel) return;
+      if (!hasChanel && !user) return;
       try {
         // Get current month's views
         const { data: viewsData, error: viewsError } = await supabase.rpc(
@@ -325,7 +326,48 @@ export default function Dashboard() {
           .single();
 
         if (requestError) throw requestError;
-        setLinkedChannels(requestData?.youtube_links?.length || 0);
+
+        const { data: requestChannels, error: errorChannels } = await supabase
+          .from("channels")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("status", "approved");
+
+        setLinkedChannels(
+          requestData?.youtube_links?.length + requestChannels?.length || 0
+        );
+        let youtubeUrls = [
+          ...(requestData?.youtube_links || []),
+          ...(requestChannels?.map((c) => c.link) || []),
+        ];
+        let analyticsData = await fetch(
+          "https://vaeuvecjtnvismnobvyy.supabase.co/functions/v1/smooth-task",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              youtubeUrls,
+            }),
+          }
+        ).then((res) => res.json());
+        // Calculate global stats from analytics data
+        const globalStats = analyticsData.reduce(
+          (acc, channel) => {
+            if (!channel.error) {
+              acc.views += parseInt(channel.viewCount) || 0;
+              acc.subscribers += parseInt(channel.subscriberCount) || 0;
+              acc.videos += parseInt(channel.videoCount) || 0;
+            }
+            return acc;
+          },
+          { views: 0, subscribers: 0, videos: 0 }
+        );
+        setMonthlyViews(globalStats.views);
+        setGlobalReach(globalStats.subscribers);
+
+        console.log("Global YouTube Stats:", globalStats);
       } catch (error) {
         console.error("Error fetching stats:", error);
       }
@@ -1157,13 +1199,17 @@ export default function Dashboard() {
                       </div>
                       <div className="ml-4">
                         <p className="text-sm font-medium text-slate-400">
-                          {new Date().toLocaleString("default", {
+                          {/* {new Date().toLocaleString("default", {
                             month: "long",
-                          })}{" "}
+                          })}{" "} */}
                           Views
                         </p>
                         <p className="text-2xl font-semibold text-white">
-                          {monthlyViews.toLocaleString()}
+                          {monthlyViews >= 1000000
+                            ? `${(monthlyViews / 1000000).toFixed(1)}M`
+                            : monthlyViews >= 1000
+                            ? `${(monthlyViews / 1000).toFixed(1)}K`
+                            : monthlyViews}
                         </p>
                       </div>
                     </div>
@@ -1216,7 +1262,14 @@ export default function Dashboard() {
                         <p className="text-sm font-medium text-slate-400">
                           Global Reach
                         </p>
-                        <p className="text-2xl font-semibold text-white">48M</p>
+                        <p className="text-2xl font-semibold text-white">
+                          {globalReach &&
+                            (globalReach >= 1000000
+                              ? `${(globalReach / 1000000).toFixed(1)}M`
+                              : globalReach >= 1000
+                              ? `${(globalReach / 1000).toFixed(1)}K`
+                              : globalReach)}
+                        </p>
                       </div>
                     </div>
                   </div>
