@@ -21,6 +21,7 @@ interface SidebarProps {
   username: string;
   profileImage: string | null;
   uploadingImage: boolean;
+  showTuto: boolean;
   handleImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   navigationItems: NavigationItem[];
   setActiveSection: (section: string) => void;
@@ -31,6 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   username,
   profileImage,
   uploadingImage,
+  showTuto,
   handleImageUpload,
   navigationItems,
   setActiveSection,
@@ -64,7 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   useEffect(() => {
     // Update tutorial state in Supabase when user or tutorial state changes
     const updateTutorialState = async () => {
-      if (!user) return;
+      if (!showTuto) return;
 
       try {
         // Check user metadata for tutorial preference
@@ -83,17 +85,13 @@ const Sidebar: React.FC<SidebarProps> = ({
           if (metadataError) {
             console.error("Error updating user metadata:", metadataError);
           }
-        } else {
-          setShowTutorial(false); // Keep tutorial hidden if already shown
         }
       } catch (err) {
         console.error("Failed to update tutorial state:", err);
       }
     };
-    console.log("🚀 ~ updateTutorialState ~ user:", user);
-
     updateTutorialState();
-  }, [user]);
+  }, [showTuto]);
   // Update position when step changes
   useEffect(() => {
     if (!showTutorial) return;
